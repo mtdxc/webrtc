@@ -13,8 +13,6 @@
 *.target.mk
 *.targets
 *.user
-*.vcproj
-*.vcxproj
 *.vcxproj.filters
 *.vpj
 *.vpw
@@ -168,3 +166,5 @@
 /tools/whitespace.txt
 /x86-generic_out/
 /xcodebuild
+
+/Debug

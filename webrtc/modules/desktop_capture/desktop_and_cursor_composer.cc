@@ -63,9 +63,11 @@ class DesktopFrameWithCursor : public DesktopFrame {
   virtual ~DesktopFrameWithCursor();
 
  private:
+  // desktop frame 生存期管理
   std::unique_ptr<DesktopFrame> original_frame_;
-
+  // 记录鼠标覆盖的起始位置
   DesktopVector restore_position_;
+  // 记录覆盖鼠标前的象素值,在虚构时还原
   std::unique_ptr<DesktopFrame> restore_frame_;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(DesktopFrameWithCursor);

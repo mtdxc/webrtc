@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2012 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -38,7 +38,10 @@ class TurnServer;
 // The default server port for TURN, as specified in RFC5766.
 const int TURN_SERVER_PORT = 3478;
 
-// Encapsulates the client's connection to the server.
+/*
+Encapsulates the client's connection to the server.
+这主要被TurnServer用来当Key使!
+*/
 class TurnServerConnection {
  public:
   TurnServerConnection() : proto_(PROTO_UDP), socket_(NULL) {}
@@ -85,7 +88,7 @@ class TurnServerAllocation : public rtc::MessageHandler,
 
   void HandleTurnMessage(const TurnMessage* msg);
   void HandleChannelData(const char* data, size_t size);
-
+  // 自删除回调函数
   sigslot::signal1<TurnServerAllocation*> SignalDestroyed;
 
  private:
@@ -121,11 +124,13 @@ class TurnServerAllocation : public rtc::MessageHandler,
 
   void OnPermissionDestroyed(Permission* perm);
   void OnChannelDestroyed(Channel* channel);
+  // 处理超时，并释放自身
   virtual void OnMessage(rtc::Message* msg);
 
   TurnServer* server_;
   rtc::Thread* thread_;
   TurnServerConnection conn_;
+  // 中转套接口
   std::unique_ptr<rtc::AsyncPacketSocket> external_socket_;
   std::string key_;
   std::string transaction_id_;
@@ -150,8 +155,9 @@ class TurnAuthInterface {
 // An interface enables Turn Server to control redirection behavior.
 class TurnRedirectInterface {
  public:
-  virtual bool ShouldRedirect(const rtc::SocketAddress& address,
-                              rtc::SocketAddress* out) = 0;
+  virtual bool ShouldRedirect(const rtc::SocketAddress& address, ///< 请求原地址
+                              rtc::SocketAddress* out ///< [out] 当返回true时这里包含重定向turn服务器地址
+                              ) = 0;
   virtual ~TurnRedirectInterface() {}
 };
 
@@ -260,6 +266,7 @@ class TurnServer : public sigslot::has_slots<> {
 
   typedef std::map<rtc::AsyncPacketSocket*,
                    ProtocolType> InternalSocketMap;
+  // 服务端口只需要监听接收连接，AsyncSocket就够了
   typedef std::map<rtc::AsyncSocket*,
                    ProtocolType> ServerSocketMap;
 
@@ -267,7 +274,9 @@ class TurnServer : public sigslot::has_slots<> {
   std::string nonce_key_;
   std::string realm_;
   std::string software_;
+  // 验证钩子
   TurnAuthInterface* auth_hook_;
+  // 重定向钩子(TURN ALLOC协议)
   TurnRedirectInterface* redirect_hook_;
   // otu - one-time-use. Server will respond with 438 if it's
   // sees the same nonce in next transaction.
@@ -275,12 +284,15 @@ class TurnServer : public sigslot::has_slots<> {
   bool reject_private_addresses_ = false;
   // Check for permission when receiving an external packet.
   bool enable_permission_checks_ = true;
-
+  // turn客户端连接协议map(AsyncPacketSocket->ProtocolType)
   InternalSocketMap server_sockets_;
+  // 监听套接口map(AsyncSocket->AsyncSocket)
   ServerSocketMap server_listen_sockets_;
+  // 外部套接口类厂(TurnServerAllocation的extrnal_socket由此类创建)
   std::unique_ptr<rtc::PacketSocketFactory> external_socket_factory_;
+  // 外部地址
   rtc::SocketAddress external_addr_;
-
+  // 客户端连接(TurnServerConnection->TurnServerAllocation*)
   AllocationMap allocations_;
 
   // For testing only. If this is non-zero, the next NONCE will be generated

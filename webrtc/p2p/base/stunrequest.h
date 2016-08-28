@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -20,11 +20,16 @@
 namespace cricket {
 
 class StunRequest;
-
 const int kAllRequests = 0;
 
 // Manages a set of STUN requests, sending and resending until we receive a
 // response or determine that the request has timed out.
+/*
+接管StunRequest的生存期，并负责StunRequest的重发(重发其实是在StunRequest中完成的)
+@note 本类不负责stun消息的收发，
+- stun消息的发由SignalSendPacket信号来通知外部(通常是Port)处理，
+- 而收通过外部调用 CheckResponse 来处理, 并最终触发StunRequest上的回调
+*/
 class StunRequestManager {
  public:
   StunRequestManager(rtc::Thread* thread);
@@ -67,14 +72,20 @@ class StunRequestManager {
   typedef std::map<std::string, StunRequest*> RequestMap;
 
   rtc::Thread* thread_;
+  // 请求Map
   RequestMap requests_;
+  // stun消息加入的一个属性
   std::string origin_;
 
   friend class StunRequest;
 };
 
-// Represents an individual request to be sent.  The STUN message can either be
-// constructed beforehand or built on demand.
+/*!
+Represents an individual request to be sent.  
+The STUN message can either be constructed beforehand or built on demand. 
+stun消息可以构造传入，也可以在 Prepare 函数中准备
+@note 此对象应该总是new出来的，当放入StunRequestManager后，生命期由后者管理.
+*/
 class StunRequest : public rtc::MessageHandler {
  public:
   StunRequest();
@@ -104,7 +115,9 @@ class StunRequest : public rtc::MessageHandler {
   int Elapsed() const;
 
  protected:
+  // 重传技术值
   int count_;
+  // 是否超时(count_>MAX_SENDS)
   bool timeout_;
   std::string origin_;
 
@@ -128,7 +141,9 @@ class StunRequest : public rtc::MessageHandler {
   void OnMessage(rtc::Message* pmsg);
 
   StunRequestManager* manager_;
+  // 实际的stun消息
   StunMessage* msg_;
+  // 发送时间戳(可用于计算Elapsed)
   int64_t tstamp_;
 
   friend class StunRequestManager;

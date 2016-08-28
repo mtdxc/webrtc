@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -310,7 +310,7 @@ void UDPPort::OnLocalAddressReady(rtc::AsyncPacketSocket* socket,
   // |emit_local_for_anyaddress| is true. This is to allow connectivity for
   // applications which absolutely requires a HOST candidate.
   rtc::SocketAddress addr = address;
-
+  // 将本机地址做为候选地址
   // If MaybeSetDefaultLocalAddress fails, we keep the "any" IP so that at
   // least the port is listening.
   MaybeSetDefaultLocalAddress(&addr);
@@ -375,8 +375,7 @@ void UDPPort::ResolveStunAddress(const rtc::SocketAddress& stun_addr) {
   resolver_->Resolve(stun_addr);
 }
 
-void UDPPort::OnResolveResult(const rtc::SocketAddress& input,
-                              int error) {
+void UDPPort::OnResolveResult(const rtc::SocketAddress& input, int error) {
   ASSERT(resolver_.get() != NULL);
 
   rtc::SocketAddress resolved;
@@ -453,7 +452,7 @@ void UDPPort::OnStunBindingRequestSucceeded(
       related_address = rtc::EmptySocketAddressWithFamily(
           related_address.family());
     }
-
+    // 增加新的本地候选地址
     AddAddress(stun_reflected_addr, socket_->GetLocalAddress(), related_address,
                UDP_PROTOCOL_NAME, "", "", STUN_PORT_TYPE,
                ICE_TYPE_PREFERENCE_SRFLX, 0, false);

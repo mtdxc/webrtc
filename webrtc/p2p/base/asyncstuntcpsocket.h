@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2013 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -29,9 +29,10 @@ class AsyncStunTCPSocket : public rtc::AsyncTCPSocketBase {
 
   AsyncStunTCPSocket(rtc::AsyncSocket* socket, bool listen);
   virtual ~AsyncStunTCPSocket() {}
-
+  // @note 要求pv是已经按stun协议封装好的数据包,本函数不负责封包，只解析stun头部
   virtual int Send(const void* pv, size_t cb,
                    const rtc::PacketOptions& options);
+  // 拆包，形成协议回调
   virtual void ProcessInput(char* data, size_t* len);
   virtual void HandleIncomingConnection(rtc::AsyncSocket* socket);
 

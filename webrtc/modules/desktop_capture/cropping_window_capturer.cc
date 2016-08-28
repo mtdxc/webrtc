@@ -88,14 +88,14 @@ void CroppingWindowCapturer::OnCaptureResult(
     callback_->OnCaptureResult(result, nullptr);
     return;
   }
-
+  // 获取窗口在虚拟视图中的位置
   DesktopRect window_rect = GetWindowRectInVirtualScreen();
   if (window_rect.is_empty()) {
     LOG(LS_WARNING) << "Window rect is empty";
     callback_->OnCaptureResult(Result::ERROR_TEMPORARY, nullptr);
     return;
   }
-
+  // 生成裁减帧,并回调callback
   callback_->OnCaptureResult(
       Result::SUCCESS,
       CreateCroppedDesktopFrame(std::move(screen_frame), window_rect));

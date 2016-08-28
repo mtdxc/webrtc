@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -19,7 +19,10 @@
 namespace cricket {
 
 const int STUN_SERVER_PORT = 3478;
-
+/**
+@brief Stun服务器
+只负责处理stun bind请求，并返回MapAddress，其他的不处理.
+*/
 class StunServer : public sigslot::has_slots<> {
  public:
   // Creates a STUN server, which will listen on the given socket.

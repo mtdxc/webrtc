@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -189,7 +189,7 @@ Port::Port(rtc::Thread* thread,
 void Port::Construct() {
   // TODO(pthatcher): Remove this old behavior once we're sure no one
   // relies on it.  If the username_fragment and password are empty,
-  // we should just create one.
+  // we should just create one. StunRequest验证要求!
   if (ice_username_fragment_.empty()) {
     ASSERT(password_.empty());
     ice_username_fragment_ = rtc::CreateRandomString(ICE_UFRAG_LENGTH);
@@ -214,7 +214,7 @@ Port::~Port() {
     list.push_back(iter->second);
     ++iter;
   }
-
+  // 删除在本Port上建立的连接
   for (uint32_t i = 0; i < list.size(); i++)
     delete list[i];
 }
@@ -265,9 +265,11 @@ void Port::AddAddress(const rtc::SocketAddress& address,
   c.set_network_name(network_->name());
   c.set_network_type(network_->type());
   c.set_related_address(related_address);
+  // 增加本地候选地址
   candidates_.push_back(c);
+  // 并触发回调
   SignalCandidateReady(this, c);
-
+  // AddCandidate...
   if (final) {
     SignalPortComplete(this);
   }
@@ -334,6 +336,7 @@ void Port::OnReadPacket(
 }
 
 void Port::OnReadyToSend() {
+  // 共享套接口模式，当Port可写，所有Channel也可写.
   AddressMap::iterator iter = connections_.begin();
   for (; iter != connections_.end(); ++iter) {
     iter->second->OnReadyToSend();
@@ -581,9 +584,10 @@ void Port::SendBindingResponse(StunMessage* request,
           << retransmit_attr->value();
     }
   }
-
+  // 反馈本方可见的对方地址
   response.AddAttribute(
       new StunXorAddressAttribute(STUN_ATTR_XOR_MAPPED_ADDRESS, addr));
+  // stun消息验证
   response.AddMessageIntegrity(password_);
   response.AddFingerprint();
 
@@ -763,8 +767,7 @@ class ConnectionRequest : public StunRequest {
     if (connection_->port()->send_retransmit_count_attribute()) {
       request->AddAttribute(new StunUInt32Attribute(
           STUN_ATTR_RETRANSMIT_COUNT,
-          static_cast<uint32_t>(connection_->pings_since_last_response_.size() -
-                                1)));
+          static_cast<uint32_t>(connection_->pings_since_last_response_.size() -1)));
     }
     uint32_t network_info = connection_->port()->Network()->id();
     network_info = (network_info << 16) | connection_->port()->network_cost();
@@ -778,8 +781,7 @@ class ConnectionRequest : public StunRequest {
       // We should have either USE_CANDIDATE attribute or ICE_NOMINATION
       // attribute but not both. That was enforced in p2ptransportchannel.
       if (connection_->use_candidate_attr()) {
-        request->AddAttribute(new StunByteStringAttribute(
-            STUN_ATTR_USE_CANDIDATE));
+        request->AddAttribute(new StunByteStringAttribute(STUN_ATTR_USE_CANDIDATE));
       }
       if (connection_->nomination() &&
           connection_->nomination() != connection_->acked_nomination()) {
@@ -829,8 +831,7 @@ class ConnectionRequest : public StunRequest {
 
   void OnSent() override {
     connection_->OnConnectionRequestSent(this);
-    // Each request is sent only once.  After a single delay , the request will
-    // time out.
+    // Each request is sent only once.  After a single delay , the request will time out.
     timeout_ = true;
   }
 
@@ -847,7 +848,7 @@ class ConnectionRequest : public StunRequest {
 //
 
 Connection::Connection(Port* port,
-                       size_t index,
+                       size_t index, ///< 本地候选地址索引
                        const Candidate& remote_candidate)
     : port_(port),
       local_candidate_index_(index),
@@ -915,11 +916,10 @@ uint64_t Connection::priority() const {
 }
 
 void Connection::set_write_state(WriteState value) {
-  WriteState old_value = write_state_;
-  write_state_ = value;
-  if (value != old_value) {
-    LOG_J(LS_VERBOSE, this) << "set_write_state from: " << old_value << " to "
-                            << value;
+  if (value != write_state_) {
+    LOG_J(LS_VERBOSE, this) << "set_write_state from: " << write_state_ 
+      << " to " << value;
+    write_state_ = value;
     SignalStateChange(this);
   }
 }
@@ -936,19 +936,17 @@ void Connection::UpdateReceiving(int64_t now) {
 }
 
 void Connection::set_state(State state) {
-  State old_state = state_;
-  state_ = state;
-  if (state != old_state) {
+  if (state != state_) {
     LOG_J(LS_VERBOSE, this) << "set_state";
+    state_ = state;
   }
 }
 
 void Connection::set_connected(bool value) {
-  bool old_value = connected_;
-  connected_ = value;
-  if (value != old_value) {
-    LOG_J(LS_VERBOSE, this) << "set_connected from: " << old_value << " to "
-                            << value;
+  if (value != connected_) {
+    LOG_J(LS_VERBOSE, this) << "set_connected from: " << connected_ 
+      << " to " << value;
+    connected_ = value;
     SignalStateChange(this);
   }
 }
@@ -960,6 +958,7 @@ void Connection::set_use_candidate_attr(bool enable) {
 void Connection::OnSendStunPacket(const void* data, size_t size,
                                   StunRequest* req) {
   rtc::PacketOptions options(port_->DefaultDscpValue());
+  // StunRequestManager->Connection::OnSendStunPacket，最后通过port来发送数据
   auto err = port_->SendTo(
       data, size, remote_candidate_.address(), options, false);
   if (err < 0) {
@@ -1024,6 +1023,7 @@ void Connection::OnReadPacket(
       case STUN_BINDING_ERROR_RESPONSE:
         if (msg->ValidateMessageIntegrity(
                 data, size, remote_candidate().password())) {
+          // 调用requests_.CheckResponse -> ConnectionRequest 的对应回调，最终回调到自身
           requests_.CheckResponse(msg.get());
         }
         // Otherwise silently discard the response message.
@@ -1217,6 +1217,7 @@ void Connection::UpdateState(int64_t now) {
 
 void Connection::Ping(int64_t now) {
   last_ping_sent_ = now;
+  // 发送一个ConnectionRequest，并创建一个Ping结构
   ConnectionRequest *req = new ConnectionRequest(this);
   pings_since_last_response_.push_back(SentPing(req->id(), now, nomination_));
   LOG_J(LS_VERBOSE, this) << "Sending STUN ping "
@@ -1482,8 +1483,7 @@ void Connection::MaybeUpdateLocalCandidate(ConnectionRequest* request,
   // transport address does not match any of the local candidates that the
   // agent knows about, the mapped address represents a new candidate -- a
   // peer reflexive candidate.
-  const StunAddressAttribute* addr =
-      response->GetAddress(STUN_ATTR_XOR_MAPPED_ADDRESS);
+  const StunAddressAttribute* addr = response->GetAddress(STUN_ATTR_XOR_MAPPED_ADDRESS);
   if (!addr) {
     LOG(LS_WARNING) << "Connection::OnConnectionRequestResponse - "
                     << "No MAPPED-ADDRESS or XOR-MAPPED-ADDRESS found in the "
@@ -1507,8 +1507,7 @@ void Connection::MaybeUpdateLocalCandidate(ConnectionRequest* request,
   // RFC 5245
   // Its priority is set equal to the value of the PRIORITY attribute
   // in the Binding request.
-  const StunUInt32Attribute* priority_attr =
-      request->msg()->GetUInt32(STUN_ATTR_PRIORITY);
+  const StunUInt32Attribute* priority_attr = request->msg()->GetUInt32(STUN_ATTR_PRIORITY);
   if (!priority_attr) {
     LOG(LS_WARNING) << "Connection::OnConnectionRequestResponse - "
                     << "No STUN_ATTR_PRIORITY found in the "
@@ -1537,7 +1536,8 @@ void Connection::MaybeUpdateLocalCandidate(ConnectionRequest* request,
   new_local_candidate.set_network_id(local_candidate().network_id());
   new_local_candidate.set_network_cost(local_candidate().network_cost());
 
-  // Change the local candidate of this Connection to the new prflx candidate.
+  // Change the local candidate of this Connection to the new prflx candidate. 
+  // 把自己的候选地址变成刚获取的索引！
   LOG_J(LS_INFO, this) << "Updating local candidate type to prflx.";
   local_candidate_index_ = port_->AddPrflxCandidate(new_local_candidate);
 

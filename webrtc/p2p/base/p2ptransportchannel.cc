@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -138,7 +138,8 @@ void P2PTransportChannel::AddAllocatorSession(
   ASSERT(worker_thread_ == rtc::Thread::Current());
 
   session->set_generation(static_cast<uint32_t>(allocator_sessions_.size()));
-  session->SignalPortReady.connect(this, &P2PTransportChannel::OnPortReady);
+  session->SignalPortReady.connect(
+      this, &P2PTransportChannel::OnPortReady);
   session->SignalPortsPruned.connect(this, &P2PTransportChannel::OnPortsPruned);
   session->SignalCandidatesReady.connect(
       this, &P2PTransportChannel::OnCandidatesReady);
@@ -166,11 +167,13 @@ void P2PTransportChannel::AddConnection(Connection* connection) {
       this, &P2PTransportChannel::OnReadPacket);
   connection->SignalReadyToSend.connect(
       this, &P2PTransportChannel::OnReadyToSend);
+  // 监控连接状态变更
   connection->SignalStateChange.connect(
       this, &P2PTransportChannel::OnConnectionStateChange);
   connection->SignalDestroyed.connect(
       this, &P2PTransportChannel::OnConnectionDestroyed);
-  connection->SignalNominated.connect(this, &P2PTransportChannel::OnNominated);
+  connection->SignalNominated.connect(
+      this, &P2PTransportChannel::OnNominated);
   had_connection_ = true;
 }
 
@@ -263,8 +266,7 @@ void P2PTransportChannel::SetIceRole(IceRole ice_role) {
 void P2PTransportChannel::SetIceTiebreaker(uint64_t tiebreaker) {
   ASSERT(worker_thread_ == rtc::Thread::Current());
   if (!ports_.empty() || !pruned_ports_.empty()) {
-    LOG(LS_ERROR)
-        << "Attempt to change tiebreaker after Port has been allocated.";
+    LOG(LS_ERROR) << "Attempt to change tiebreaker after Port has been allocated.";
     return;
   }
 
@@ -473,12 +475,10 @@ void P2PTransportChannel::OnPortReady(PortAllocatorSession *session,
 
   // Set in-effect options on the new port
   for (OptionMap::const_iterator it = options_.begin();
-       it != options_.end();
-       ++it) {
+       it != options_.end(); ++it) {
     int val = port->SetOption(it->first, it->second);
     if (val < 0) {
-      LOG_J(LS_WARNING, port) << "SetOption(" << it->first
-                              << ", " << it->second
+      LOG_J(LS_WARNING, port) << "SetOption(" << it->first << ", " << it->second
                               << ") failed: " << port->GetError();
     }
   }
@@ -486,13 +486,15 @@ void P2PTransportChannel::OnPortReady(PortAllocatorSession *session,
   // Remember the ports and candidates, and signal that candidates are ready.
   // The session will handle this, and send an initiate/accept/modify message
   // if one is pending.
-
   port->SetIceRole(ice_role_);
   port->SetIceTiebreaker(tiebreaker_);
+
   ports_.push_back(port);
+
   port->SignalUnknownAddress.connect(
       this, &P2PTransportChannel::OnUnknownAddress);
-  port->SignalDestroyed.connect(this, &P2PTransportChannel::OnPortDestroyed);
+  port->SignalDestroyed.connect(
+      this, &P2PTransportChannel::OnPortDestroyed);
 
   port->SignalRoleConflict.connect(
       this, &P2PTransportChannel::OnRoleConflict);
@@ -500,10 +502,8 @@ void P2PTransportChannel::OnPortReady(PortAllocatorSession *session,
 
   // Attempt to create a connection from this new port to all of the remote
   // candidates that we were given so far.
-
-  std::vector<RemoteCandidate>::iterator iter;
-  for (iter = remote_candidates_.begin(); iter != remote_candidates_.end();
-       ++iter) {
+  for (std::vector<RemoteCandidate>::iterator iter = remote_candidates_.begin();
+    iter != remote_candidates_.end(); ++iter) {
     CreateConnection(port, *iter, iter->origin_port());
   }
 
@@ -570,8 +570,7 @@ void P2PTransportChannel::OnUnknownAddress(
     // Create a new candidate with this address.
     // The priority of the candidate is set to the PRIORITY attribute
     // from the request.
-    const StunUInt32Attribute* priority_attr =
-        stun_msg->GetUInt32(STUN_ATTR_PRIORITY);
+    const StunUInt32Attribute* priority_attr = stun_msg->GetUInt32(STUN_ATTR_PRIORITY);
     if (!priority_attr) {
       LOG(LS_WARNING) << "P2PTransportChannel::OnUnknownAddress - "
                       << "No STUN_ATTR_PRIORITY found in the "
@@ -867,8 +866,7 @@ uint32_t P2PTransportChannel::GetRemoteCandidateGeneration(
 }
 
 // Check if remote candidate is already cached.
-bool P2PTransportChannel::IsDuplicateRemoteCandidate(
-    const Candidate& candidate) {
+bool P2PTransportChannel::IsDuplicateRemoteCandidate(const Candidate& candidate) {
   for (size_t i = 0; i < remote_candidates_.size(); ++i) {
     if (remote_candidates_[i].IsEquivalent(candidate)) {
       return true;
@@ -1201,7 +1199,7 @@ void P2PTransportChannel::SortConnectionsAndUpdateState() {
   // Find the best alternative connection by sorting.  It is important to note
   // that amongst equal preference, writable connections, this will choose the
   // one whose estimated latency is lowest.  So it is the only one that we
-  // need to consider switching to.
+  // need to consider switching to. Connection是排序的
   std::stable_sort(connections_.begin(), connections_.end(),
                    [this](const Connection* a, const Connection* b) {
                      int cmp = CompareConnections(
@@ -1213,14 +1211,15 @@ void P2PTransportChannel::SortConnectionsAndUpdateState() {
                      return a->rtt() < b->rtt();
                    });
 
-  LOG(LS_VERBOSE) << "Sorting " << connections_.size()
-                  << " available connections:";
-  for (size_t i = 0; i < connections_.size(); ++i) {
-    LOG(LS_VERBOSE) << connections_[i]->ToString();
+  if (rtc::LogMessage::Loggable(rtc::LS_VERBOSE)){
+    LOG(LS_VERBOSE) << "Sorting " << connections_.size()
+      << " available connections:";
+    for (size_t i = 0; i < connections_.size(); ++i) {
+      LOG(LS_VERBOSE) << connections_[i]->ToString() << ",rtt "<< connections_[i]->rtt();
+    }
   }
 
-  Connection* top_connection =
-      (connections_.size() > 0) ? connections_[0] : nullptr;
+  Connection* top_connection = (connections_.size() > 0) ? connections_[0] : nullptr;
 
   // If necessary, switch to the new choice. Note that |top_connection| doesn't
   // have to be writable to become the selected connection although it will
@@ -1287,7 +1286,7 @@ void P2PTransportChannel::PruneConnections() {
     if (!premier || premier->weak()) {
       continue;
     }
-
+    // 每个网卡只保留一个可写的连接(导致 BestConnection 网卡的其他连接都被pure掉, 哪怕是turn地址)
     for (Connection* conn : connections_) {
       if ((conn != premier) && (conn->port()->Network() == network) &&
           (CompareConnectionCandidates(premier, conn) >= 0)) {
@@ -1440,7 +1439,7 @@ Connection* P2PTransportChannel::GetBestConnectionOnNetwork(
     return selected_connection_;
   }
 
-  // Otherwise, we return the top-most in sorted order.
+  // Otherwise, we return the top-most in sorted order. why? no use conntion status?
   for (size_t i = 0; i < connections_.size(); ++i) {
     if (connections_[i]->port()->Network() == network) {
       return connections_[i];
@@ -1814,7 +1813,7 @@ void P2PTransportChannel::OnReadPacket(Connection* connection,
   SignalReadPacket(this, data, len, packet_time, 0);
 
   // May need to switch the sending connection based on the receiving media path
-  // if this is the controlled side.
+  // if this is the controlled side. 第一个收到包的可读连接自动为 best_connection_
   if (ice_role_ == ICEROLE_CONTROLLED) {
     MaybeSwitchSelectedConnection(connection, "data received");
   }

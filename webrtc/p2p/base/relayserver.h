@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -64,24 +64,29 @@ class RelayServer : public rtc::MessageHandler,
 
   // Methods for testing and debuging.
   int GetConnectionCount() const;
+  // 根据Map的索引返回地址对?
   rtc::SocketAddressPair GetConnection(int connection) const;
   bool HasConnection(const rtc::SocketAddress& address) const;
 
  private:
   typedef std::vector<rtc::AsyncPacketSocket*> SocketList;
-  typedef std::map<rtc::AsyncSocket*,
-                   cricket::ProtocolType> ServerSocketMap;
+  typedef std::map<rtc::AsyncSocket*, cricket::ProtocolType> ServerSocketMap;
   typedef std::map<std::string, RelayServerBinding*> BindingMap;
-  typedef std::map<rtc::SocketAddressPair,
-                   RelayServerConnection*> ConnectionMap;
+  typedef std::map<rtc::SocketAddressPair, RelayServerConnection*> ConnectionMap;
 
   rtc::Thread* thread_;
   bool log_bindings_;
+
+  // stun客户端套接口列表(这是物理连接)
   SocketList internal_sockets_;
   SocketList external_sockets_;
+
   SocketList removed_sockets_;
+  // 监听套接口列表（这应该是SSL和TCP套接口协议之分吧）
   ServerSocketMap server_sockets_;
+  // username -> RelayServerBinding
   BindingMap bindings_;
+  // addrPeers -> RelayServerConnection
   ConnectionMap connections_;
 
   // Called when a packet is received by the server on one of its sockets.
@@ -104,10 +109,8 @@ class RelayServer : public rtc::MessageHandler,
   void HandleStunAllocate(const char* bytes, size_t size,
                           const rtc::SocketAddressPair& ap,
                           rtc::AsyncPacketSocket* socket);
-  void HandleStun(RelayServerConnection* int_conn, const char* bytes,
-                  size_t size);
-  void HandleStunAllocate(RelayServerConnection* int_conn,
-                          const StunMessage& msg);
+  void HandleStun(RelayServerConnection* int_conn, const char* bytes, size_t size);
+  void HandleStunAllocate(RelayServerConnection* int_conn, const StunMessage& msg);
   void HandleStunSend(RelayServerConnection* int_conn, const StunMessage& msg);
 
   // Adds/Removes the a connection or binding.
@@ -174,6 +177,7 @@ class RelayServerConnection {
   rtc::SocketAddressPair addr_pair_;
   rtc::AsyncPacketSocket* socket_;
   bool locked_;
+  // internel通过此变量来定位到目的地址
   rtc::SocketAddress default_dest_;
 };
 
@@ -207,7 +211,7 @@ class RelayServerBinding : public rtc::MessageHandler {
   bool HasMagicCookie(const char* bytes, size_t size) const;
 
   // Determines the connection to use to send packets to or from the given
-  // external address.
+  // external address. 根据缺省目的地址查找内部连接
   RelayServerConnection* GetInternalConnection(
       const rtc::SocketAddress& ext_addr);
   RelayServerConnection* GetExternalConnection(
@@ -223,6 +227,7 @@ class RelayServerBinding : public rtc::MessageHandler {
   std::string password_;
   std::string magic_cookie_;
 
+  // 这边是逻辑连接
   std::vector<RelayServerConnection*> internal_connections_;
   std::vector<RelayServerConnection*> external_connections_;
 

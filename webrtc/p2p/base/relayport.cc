@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -406,8 +406,7 @@ RelayConnection::RelayConnection(const ProtocolAddress* protocol_address,
     : socket_(socket),
       protocol_address_(protocol_address) {
   request_manager_ = new StunRequestManager(thread);
-  request_manager_->SignalSendPacket.connect(this,
-                                             &RelayConnection::OnSendPacket);
+  request_manager_->SignalSendPacket.connect(this, &RelayConnection::OnSendPacket);
 }
 
 RelayConnection::~RelayConnection() {
@@ -415,8 +414,7 @@ RelayConnection::~RelayConnection() {
   delete socket_;
 }
 
-int RelayConnection::SetSocketOption(rtc::Socket::Option opt,
-                                     int value) {
+int RelayConnection::SetSocketOption(rtc::Socket::Option opt, int value) {
   if (socket_) {
     return socket_->SetOption(opt, value);
   }
@@ -596,7 +594,7 @@ int RelayEntry::SendTo(const void* data, size_t size,
   if (ext_addr_ == addr) {
     StunUInt32Attribute* options_attr =
       StunAttribute::CreateUInt32(STUN_ATTR_OPTIONS);
-    options_attr->SetValue(0x1);
+    options_attr->SetValue(0x1); // udp port
     VERIFY(request.AddAttribute(options_attr));
   }
 
@@ -715,8 +713,7 @@ void RelayEntry::OnReadPacket(
   if (current_connection_->CheckResponse(&msg)) {
     return;
   } else if (msg.type() == STUN_SEND_RESPONSE) {
-    if (const StunUInt32Attribute* options_attr =
-        msg.GetUInt32(STUN_ATTR_OPTIONS)) {
+    if (const StunUInt32Attribute* options_attr = msg.GetUInt32(STUN_ATTR_OPTIONS)) {
       if (options_attr->value() & 0x1) {
         locked_ = true;
       }
@@ -728,9 +725,7 @@ void RelayEntry::OnReadPacket(
   }
 
   // This must be a data indication.
-
-  const StunAddressAttribute* addr_attr =
-      msg.GetAddress(STUN_ATTR_SOURCE_ADDRESS2);
+  const StunAddressAttribute* addr_attr = msg.GetAddress(STUN_ATTR_SOURCE_ADDRESS2);
   if (!addr_attr) {
     LOG(INFO) << "Data indication has no source address";
     return;

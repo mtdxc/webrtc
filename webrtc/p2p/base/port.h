@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -119,7 +119,7 @@ typedef std::set<rtc::SocketAddress> ServerAddresses;
 
 // Represents a local communication mechanism that can be used to create
 // connections to similar mechanisms of the other client.  Subclasses of this
-// one add support for specific mechanisms like local UDP ports.
+// one add support for specific mechanisms like local UDP ports. 所有Port上面都有走stun协议!
 class Port : public PortInterface, public rtc::MessageHandler,
              public sigslot::has_slots<> {
  public:
@@ -390,12 +390,16 @@ class Port : public PortInterface, public rtc::MessageHandler,
   // username_fragment().
   std::string ice_username_fragment_;
   std::string password_;
+  // 一个本地port可根据stun获取一些候选地址(sturn reflect地址和turn地址等)
   std::vector<Candidate> candidates_;
+  // 连接Map(RemoteAddr->Connection), 后者表示本地到远程候选地址的一个连接
   AddressMap connections_;
   int timeout_delay_;
   bool enable_port_packets_;
   IceRole ice_role_;
   uint64_t tiebreaker_;
+
+  // 共享套接口
   bool shared_socket_;
   // Information to use when going through a proxy.
   std::string user_agent_;
@@ -412,7 +416,7 @@ class Port : public PortInterface, public rtc::MessageHandler,
 };
 
 // Represents a communication link between a port on the local client and a
-// port on the remote client.
+// port on the remote client. 采用StunBind来维护心跳
 class Connection : public CandidatePairInterface,
                    public rtc::MessageHandler,
                    public sigslot::has_slots<> {
@@ -421,7 +425,7 @@ class Connection : public CandidatePairInterface,
     SentPing(const std::string id, int64_t sent_time, uint32_t nomination)
         : id(id), sent_time(sent_time), nomination(nomination) {}
 
-    std::string id;
+    std::string id; ///< stun ping的事务ID
     int64_t sent_time;
     uint32_t nomination;
   };
@@ -476,6 +480,7 @@ class Connection : public CandidatePairInterface,
 
   ConnectionInfo stats();
 
+  // 状态回调
   sigslot::signal1<Connection*> SignalStateChange;
 
   // Sent when the connection has decided that it is no longer of value.  It
@@ -484,13 +489,13 @@ class Connection : public CandidatePairInterface,
 
   // The connection can send and receive packets asynchronously.  This matches
   // the interface of AsyncPacketSocket, which may use UDP or TCP under the
-  // covers.
+  // covers. 发送接口
   virtual int Send(const void* data, size_t size,
                    const rtc::PacketOptions& options) = 0;
 
   // Error if Send() returns < 0
   virtual int GetError() = 0;
-
+  // 数据接口
   sigslot::signal4<Connection*, const char*, size_t, const rtc::PacketTime&>
       SignalReadPacket;
 
@@ -710,7 +715,10 @@ class Connection : public CandidatePairInterface,
 class ProxyConnection : public Connection {
  public:
   ProxyConnection(Port* port, size_t index, const Candidate& remote_candidate);
-
+  /*! 
+  共享Port端口进行网络数据发送，并根据状态来发送
+  当PING ok时才发送，否则返回EWOULDBLOCK错误
+  */
   int Send(const void* data,
            size_t size,
            const rtc::PacketOptions& options) override;

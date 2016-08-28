@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright (c) 2014 The WebRTC project authors. All Rights Reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -23,6 +23,7 @@ class CroppedDesktopFrame : public DesktopFrame {
                       const DesktopRect& rect);
 
  private:
+  // 持有原始帧生命期
   std::unique_ptr<DesktopFrame> frame_;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(CroppedDesktopFrame);
@@ -40,9 +41,9 @@ std::unique_ptr<DesktopFrame> CreateCroppedDesktopFrame(
 
 CroppedDesktopFrame::CroppedDesktopFrame(std::unique_ptr<DesktopFrame> frame,
                                          const DesktopRect& rect)
-    : DesktopFrame(rect.size(),
-                   frame->stride(),
-                   frame->GetFrameDataAtPos(rect.top_left()),
+    : DesktopFrame(rect.size(), ///< 帧大小
+                   frame->stride(), ///< 行大小与原始帧一样
+                   frame->GetFrameDataAtPos(rect.top_left()), ///< 起始位置变了
                    frame->shared_memory()) {
   frame_ = std::move(frame);
 }

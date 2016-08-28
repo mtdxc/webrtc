@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -610,7 +610,7 @@ void HttpResponseData::set_success(const std::string& content_type,
                                    StreamInterface* document,
                                    uint32_t scode) {
   this->scode = scode;
-  message.erase(message.begin(), message.end());
+  message.clear();
   setContent(content_type, document);
 }
 

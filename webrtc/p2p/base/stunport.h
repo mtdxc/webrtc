@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -72,11 +72,11 @@ class UDPPort : public Port {
   }
 
   virtual ~UDPPort();
-
+  // 绑定的本地UDP套接口(该地址能实现多路复用)
   rtc::SocketAddress GetLocalAddress() const {
     return socket_->GetLocalAddress();
   }
-
+  // stun服务器地址?
   const ServerAddresses& server_addresses() const {
     return server_addresses_;
   }
@@ -226,7 +226,7 @@ class UDPPort : public Port {
   void MaybeSetPortCompleteOrError();
 
   bool HasCandidateWithAddress(const rtc::SocketAddress& addr) const;
-
+  // stun 服务地址列表
   // If this is a low-cost network, it will keep on sending STUN binding
   // requests indefinitely to keep the NAT binding alive. Otherwise, stop
   // sending STUN binding requests after HIGH_COST_PORT_KEEPALIVE_LIFETIME.
@@ -237,11 +237,17 @@ class UDPPort : public Port {
   }
 
   ServerAddresses server_addresses_;
+  // bind成功的stun服务器地址列表
   ServerAddresses bind_request_succeeded_servers_;
+  // bind失败的stun服务器地址列表
   ServerAddresses bind_request_failed_servers_;
+
+  // stun请求管理器
   StunRequestManager requests_;
+  // udp套接口(用于发包)
   rtc::AsyncPacketSocket* socket_;
   int error_;
+  // DNS解析管理器
   std::unique_ptr<AddressResolver> resolver_;
   bool ready_;
   int stun_keepalive_delay_;
@@ -264,7 +270,7 @@ class StunPort : public UDPPort {
                           uint16_t max_port,
                           const std::string& username,
                           const std::string& password,
-                          const ServerAddresses& servers,
+                          const ServerAddresses& servers, ///< STUN服务器地址列表
                           const std::string& origin) {
     StunPort* port = new StunPort(thread, factory, network,
                                   ip, min_port, max_port,

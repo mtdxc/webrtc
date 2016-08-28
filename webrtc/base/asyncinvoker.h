@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2014 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -35,7 +35,7 @@ namespace rtc {
 // help: any calls in flight will be cancelled when the AsyncInvoker used to
 // make the call is destructed, and any calls executing will be allowed to
 // complete before AsyncInvoker destructs.
-//
+// 在调用函数的同时不能删除本对象,回调前行
 // The easiest way to ensure lifetimes are handled correctly is to create a
 // class that owns the Thread and AsyncInvoker objects, and then call its
 // methods asynchronously as needed.
@@ -107,7 +107,8 @@ class AsyncInvoker : public MessageHandler {
                    const FunctorT& functor,
                    void (HostT::*callback)(ReturnT),
                    HostT* callback_host,
-                   uint32_t id = 0) {
+                   uint32_t id = 0 ///< 可以用来给调用分组, 可采用 Flush 来等待某种类型调用完成
+                   ) {
     scoped_refptr<AsyncClosure> closure(
         new RefCountedObject<NotifyingAsyncClosure<ReturnT, FunctorT, HostT> >(
             this, callback_posted_from, Thread::Current(), functor, callback,
@@ -116,6 +117,7 @@ class AsyncInvoker : public MessageHandler {
   }
 
   // Call |functor| asynchronously on |thread|, calling |callback| when done.
+  // Overloaded for void return. 回调是在当前线程中进行的,不是在目的线程thread
   // Uses a separate Location for |callback_posted_from| so that the functor
   // invoke and the callback invoke can be differentiated.
   // Overloaded for void return.
@@ -134,6 +136,7 @@ class AsyncInvoker : public MessageHandler {
     DoInvoke(posted_from, thread, closure, id);
   }
 
+  // 等待某个线程的调用完成,并可根据id类型进行过滤  虚构函数取消调用而不是等待,如要等待请调用flush
   // Synchronously execute on |thread| all outstanding calls we own
   // that are pending on |thread|, and wait for calls to complete
   // before returning. Optionally filter by message id.

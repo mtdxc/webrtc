@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -56,7 +56,9 @@ typedef HttpError HttpErrorType;
 #else  // !STRICT_HTTP_ERROR
 typedef int HttpErrorType;
 #endif  // !STRICT_HTTP_ERROR
-
+/*!
+@brief 主要处理缓存相关事宜.
+*/
 class HttpClient : private IHttpNotify, public sigslot::has_slots<> {
 public:
   // If HttpRequestData and HttpResponseData objects are provided, they must

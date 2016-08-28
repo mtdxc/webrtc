@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -570,11 +570,11 @@ class FifoBuffer : public StreamInterface {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-
+// 打印文件内容(读和写)
 class LoggingAdapter : public StreamAdapterInterface {
- public:
+public:
   LoggingAdapter(StreamInterface* stream, LoggingSeverity level,
-                 const std::string& label, bool hex_mode = false);
+    const std::string& label, bool hex_mode = false);
 
   void set_label(const std::string& label);
 
@@ -587,14 +587,18 @@ class LoggingAdapter : public StreamAdapterInterface {
                      size_t* written,
                      int* error) override;
   void Close() override;
-
+  
  protected:
   void OnEvent(StreamInterface* stream, int events, int err) override;
 
  private:
+  // 调试等级
   LoggingSeverity level_;
+  // 前缀
   std::string label_;
+  // 16禁止模式
   bool hex_mode_;
+  // 后缀
   LogMultilineState lms_;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(LoggingAdapter);

@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -192,6 +192,15 @@ std::string GetCacheID(const HttpRequestData& request) {
 // Public Helpers
 //////////////////////////////////////////////////////////////////////
 
+/**
+@brief 将Http response头部写入output中.
+
+@param response http头部 
+@param output 输出流
+@param size [out] 返回写的字计数
+@return 成功则返回true,否则false
+@retval 
+*/
 bool HttpWriteCacheHeaders(const HttpResponseData* response,
                            StreamInterface* output, size_t* size) {
   size_t length = 0;
@@ -224,6 +233,14 @@ bool HttpWriteCacheHeaders(const HttpResponseData* response,
   return true;
 }
 
+/**
+@brief 从input读取Http头部，并以combine填充response头部.
+
+@param input 输入流
+@param response http头部
+@param combine 头部填充模式
+@return 成功则返回true
+*/
 bool HttpReadCacheHeaders(StreamInterface* input, HttpResponseData* response,
                           HttpData::HeaderCombine combine) {
   while (true) {
@@ -480,6 +497,7 @@ bool HttpClient::BeginCacheFile() {
   if (!output) {
     output = new NullStream;
   }
+  // 负责将对output的读写操作都记录到stream中
   StreamTap* tap = new StreamTap(output, stream.release());
   response().document.reset(tap);
   return true;

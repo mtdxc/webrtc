@@ -21,7 +21,7 @@ namespace webrtc {
 
 // WindowCapturer implementation that uses a screen capturer to capture the
 // whole screen and crops the video frame to the window area when the captured
-// window is on top.
+// window is on top. 采集整个屏幕,然后裁减特定窗口区域
 class CroppingWindowCapturer : public WindowCapturer,
                                public DesktopCapturer::Callback {
  public:

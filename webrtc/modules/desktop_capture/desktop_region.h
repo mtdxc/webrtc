@@ -83,10 +83,13 @@ class DesktopRegion {
     // |row_span_| matches spans on consecutive rows then they are also merged
     // into |rect_|, to generate more efficient output.
     void UpdateCurrentRect();
-
+    // same y pos rowm
     Rows::const_iterator row_;
+    // prev y pos
     Rows::const_iterator previous_row_;
+    // x pos iterator
     RowSpanSet::const_iterator row_span_;
+    // cur rect size
     DesktopRect rect_;
   };
 

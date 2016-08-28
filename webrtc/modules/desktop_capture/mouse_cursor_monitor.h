@@ -82,6 +82,11 @@ class MouseCursorMonitor {
   // time) and then Callback::OnMouseCursorPosition() if mode is set to
   // SHAPE_AND_POSITION.
   virtual void Capture() = 0;
+  /*
+  根据Mode会触发如下回调:
+  SHAPE_ONLY Callback::OnMouseCursor() 当鼠标形状改变时回调触发
+  SHAPE_AND_POSITION 除了上者外,还会回调 Callback::OnMouseCursorPosition() 当鼠标位置改变时触发
+  */
 };
 
 }  // namespace webrtc

@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -315,7 +315,8 @@ class StunAddressAttribute : public StunAttribute {
 
 // Implements STUN attributes that record an Internet address. When encoded
 // in a STUN message, the address contained in this attribute is XORed with the
-// transaction ID of the message.
+// transaction ID of the message. 
+// ipv4与magic code做异或，否则与magic_code + transction_id做异或
 class StunXorAddressAttribute : public StunAddressAttribute {
  public:
   StunXorAddressAttribute(uint16_t type, const rtc::SocketAddress& addr);

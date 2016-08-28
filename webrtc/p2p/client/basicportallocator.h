@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -22,6 +22,7 @@
 
 namespace cricket {
 
+// 负责保存配置变量，并初始化BasicPortAllocatorSession
 class BasicPortAllocator : public PortAllocator {
  public:
   BasicPortAllocator(rtc::NetworkManager* network_manager,
@@ -36,7 +37,7 @@ class BasicPortAllocator : public PortAllocator {
                      const rtc::SocketAddress& relay_server_tcp,
                      const rtc::SocketAddress& relay_server_ssl);
   virtual ~BasicPortAllocator();
-
+  // 网络管理器，用于枚举网卡和监控网卡改变
   // Set to kDefaultNetworkIgnoreMask by default.
   void SetNetworkIgnoreMask(int network_ignore_mask) override {
     // TODO(phoglund): implement support for other types than loopback.
@@ -67,6 +68,7 @@ class BasicPortAllocator : public PortAllocator {
 
   rtc::NetworkManager* network_manager_;
   rtc::PacketSocketFactory* socket_factory_;
+  // 允许tcp本地监听
   bool allow_tcp_listen_;
   int network_ignore_mask_ = rtc::kDefaultNetworkIgnoreMask;
 };
@@ -82,6 +84,10 @@ enum class SessionState {
               // process will be started.
 };
 
+/* 
+对于每个网卡Network，创建一个AllocationSequence来进行Port分配
+后者根据创建策略，依次开启UdpPort,StunPort和TurnPort等
+*/
 class BasicPortAllocatorSession : public PortAllocatorSession,
                                   public rtc::MessageHandler {
  public:
@@ -176,6 +182,7 @@ class BasicPortAllocatorSession : public PortAllocatorSession,
   void OnConfigStop();
   void AllocatePorts();
   void OnAllocate();
+  // 对于每个网卡，看是否已创建过 AllocSequence，没有则创建和启动 AllocSequence
   void DoAllocate();
   void OnNetworksChanged();
   void OnAllocationSequenceObjectsCreated();
@@ -212,12 +219,16 @@ class BasicPortAllocatorSession : public PortAllocatorSession,
   bool PruneTurnPorts(Port* newly_pairable_turn_port);
 
   BasicPortAllocator* allocator_;
+  // 工作线程（StartGettingPorts时创建）
   rtc::Thread* network_thread_;
+  // 默认从allocator_获取，否则自己创建一个
   std::unique_ptr<rtc::PacketSocketFactory> owned_socket_factory_;
   rtc::PacketSocketFactory* socket_factory_;
+
   bool allocation_started_;
   bool network_manager_started_;
   bool allocation_sequences_created_;
+
   std::vector<PortConfiguration*> configs_;
   std::vector<AllocationSequence*> sequences_;
   std::vector<PortData> ports_;
@@ -234,6 +245,8 @@ class BasicPortAllocatorSession : public PortAllocatorSession,
 struct PortConfiguration : public rtc::MessageData {
   // TODO(jiayl): remove |stun_address| when Chrome is updated.
   rtc::SocketAddress stun_address;
+
+  // 以下这些不是BasicPortAllocator的成员么
   ServerAddresses stun_servers;
   std::string username;
   std::string password;
@@ -270,8 +283,11 @@ struct PortConfiguration : public rtc::MessageData {
 class UDPPort;
 class TurnPort;
 
-// Performs the allocation of ports, in a sequenced (timed) manner, for a given
-// network and IP address.
+/* Performs the allocation of ports, in a sequenced (timed) manner, for a given
+ network and IP address. 
+ 按优先级以phase_和allocator()->step_delay(默认1s)延迟创建Port
+ 并处理共享套接口及上面的网络包分发.
+ */
 class AllocationSequence : public rtc::MessageHandler,
                            public sigslot::has_slots<> {
  public:
@@ -299,10 +315,11 @@ class AllocationSequence : public rtc::MessageHandler,
   void set_network_failed() { network_failed_ = true; }
 
   // Disables the phases for a new sequence that this one already covers for an
-  // equivalent network setup.
+  // equivalent network setup. 为新建的sequence禁用一些状态，这些状态已在本对象中进行
   void DisableEquivalentPhases(rtc::Network* network,
                                PortConfiguration* config,
-                               uint32_t* flags);
+                               uint32_t* flags ///< [out] flag禁用状态
+                               );
 
   // Starts and stops the sequence.  When started, it will continue allocating
   // new ports on its own timed schedule.
@@ -351,12 +368,19 @@ class AllocationSequence : public rtc::MessageHandler,
   rtc::IPAddress ip_;
   PortConfiguration* config_;
   State state_;
+
   uint32_t flags_;
+  // 已启用的协议
   ProtocolList protocols_;
+  // 共享套接口(udp_port_和turn_ports_共享套接口)
   std::unique_ptr<rtc::AsyncPacketSocket> udp_socket_;
+
   // There will be only one udp port per AllocationSequence.
   UDPPort* udp_port_;
+  // 采用共享套接口分配的TurnPort
   std::vector<TurnPort*> turn_ports_;
+
+  // 当前分配状态
   int phase_;
 };
 

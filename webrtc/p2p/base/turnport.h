@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2012 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -48,8 +48,8 @@ class TurnPort : public Port {
                           rtc::AsyncPacketSocket* socket,
                           const std::string& username,  // ice username.
                           const std::string& password,  // ice password.
-                          const ProtocolAddress& server_address,
-                          const RelayCredentials& credentials,
+                          const ProtocolAddress& server_address, // turn server addr
+                          const RelayCredentials& credentials, // turn user name
                           int server_priority,
                           const std::string& origin) {
     return new TurnPort(thread, factory, network, socket, username, password,
@@ -64,8 +64,8 @@ class TurnPort : public Port {
                           uint16_t max_port,
                           const std::string& username,  // ice username.
                           const std::string& password,  // ice password.
-                          const ProtocolAddress& server_address,
-                          const RelayCredentials& credentials,
+                          const ProtocolAddress& server_address, // turn服务器地址
+                          const RelayCredentials& credentials, // turn用户名及密码
                           int server_priority,
                           const std::string& origin) {
     return new TurnPort(thread, factory, network, ip, min_port, max_port,
@@ -249,13 +249,14 @@ class TurnPort : public Port {
   void DestroyEntryIfNotCancelled(TurnEntry* entry, int64_t timestamp);
   void ScheduleEntryDestruction(TurnEntry* entry);
   void CancelEntryDestruction(TurnEntry* entry);
-
+  // 当前使用的turn服务器地址
   // Marks the connection with remote address |address| failed and
   // pruned (a.k.a. write-timed-out). Returns true if a connection is found.
   bool FailAndPruneConnection(const rtc::SocketAddress& address);
 
   ProtocolAddress server_address_;
   RelayCredentials credentials_;
+  // 记录所有重定向过的turn地址
   AttemptedServerSet attempted_server_addresses_;
 
   rtc::AsyncPacketSocket* socket_;
@@ -268,7 +269,12 @@ class TurnPort : public Port {
   std::string nonce_;       // From 401/438 response message.
   std::string hash_;        // Digest of username:realm:password
 
+  // turn通道号分配器
   int next_channel_number_;
+  /** 
+  @brief 保存turn创建的通道列表.
+  turn通道只负责数据的发送和接收（增加turn头部），实际上层业务逻辑由Channel来处理
+  */
   EntryList entries_;
 
   PortState state_;

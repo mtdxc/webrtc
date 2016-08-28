@@ -55,6 +55,7 @@ class DesktopAndCursorComposer : public DesktopCapturer,
 
   DesktopCapturer::Callback* callback_;
 
+  // 保存上次MouseCursorMonitor反馈的数据
   std::unique_ptr<MouseCursor> cursor_;
   MouseCursorMonitor::CursorState cursor_state_;
   DesktopVector cursor_position_;

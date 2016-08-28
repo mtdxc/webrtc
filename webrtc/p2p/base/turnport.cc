@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2012 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -56,6 +56,7 @@ static int GetRelayPreference(cricket::ProtocolType proto, bool secure) {
   return relay_preference;
 }
 
+// 中转端口分配请求
 class TurnAllocateRequest : public StunRequest {
  public:
   explicit TurnAllocateRequest(TurnPort* port);
@@ -73,7 +74,7 @@ class TurnAllocateRequest : public StunRequest {
 
   TurnPort* port_;
 };
-
+// 心跳包（Alloc生存期管理）
 class TurnRefreshRequest : public StunRequest {
  public:
   explicit TurnRefreshRequest(TurnPort* port);
@@ -88,7 +89,7 @@ class TurnRefreshRequest : public StunRequest {
   TurnPort* port_;
   int lifetime_;
 };
-
+// 发包请求
 class TurnCreatePermissionRequest : public StunRequest,
                                     public sigslot::has_slots<> {
  public:
@@ -105,9 +106,9 @@ class TurnCreatePermissionRequest : public StunRequest,
 
   TurnPort* port_;
   TurnEntry* entry_;
-  rtc::SocketAddress ext_addr_;
+  rtc::SocketAddress ext_addr_; ///< 对方地址
 };
-
+// 创建点对点通道
 class TurnChannelBindRequest : public StunRequest,
                                public sigslot::has_slots<> {
  public:
@@ -132,7 +133,11 @@ class TurnChannelBindRequest : public StunRequest,
 // a channel for this remote destination to reduce the overhead of sending data.
 class TurnEntry : public sigslot::has_slots<> {
  public:
-  enum BindState { STATE_UNBOUND, STATE_BINDING, STATE_BOUND };
+  enum BindState { 
+    STATE_UNBOUND, ///< 没有ChannelBind，发送消息必须通过STUN隧道方式
+    STATE_BINDING, ///< 正在ChannelBind，发送消息仍然采用STUN隧道方式
+    STATE_BOUND    ///< ChannelBind成功，采用Channel(ID)协议发送消息
+  };
   TurnEntry(TurnPort* port, int channel_id,
             const rtc::SocketAddress& ext_addr);
 
@@ -169,8 +174,11 @@ class TurnEntry : public sigslot::has_slots<> {
 
  private:
   TurnPort* port_;
+  // 通道ID，根据turn协议ushort类型就行
   int channel_id_;
+  // 对方端点地址
   rtc::SocketAddress ext_addr_;
+  // 绑定状态
   BindState state_;
   // A non-zero value indicates that this entry is scheduled to be destroyed.
   // It is also used as an ID of the event scheduling. When the destruction
@@ -182,7 +190,7 @@ class TurnEntry : public sigslot::has_slots<> {
 TurnPort::TurnPort(rtc::Thread* thread,
                    rtc::PacketSocketFactory* factory,
                    rtc::Network* network,
-                   rtc::AsyncPacketSocket* socket,
+                   rtc::AsyncPacketSocket* socket, ///< 本地监听套接口
                    const std::string& username,
                    const std::string& password,
                    const ProtocolAddress& server_address,
@@ -406,6 +414,7 @@ void TurnPort::OnSocketConnect(rtc::AsyncPacketSocket* socket) {
 
   LOG(LS_INFO) << "TurnPort connected to " << socket->GetRemoteAddress()
                << " using tcp.";
+  // tcp连接上发送内容
   SendRequest(new TurnAllocateRequest(this), 0);
 }
 
@@ -415,6 +424,7 @@ void TurnPort::OnSocketClose(rtc::AsyncPacketSocket* socket, int error) {
   Close();
 }
 
+// alloc重试
 void TurnPort::OnAllocateMismatch() {
   if (allocate_mismatch_retries_ >= MAX_ALLOCATE_MISMATCH_RETRIES) {
     LOG_J(LS_WARNING, this) << "Giving up on the port after "
@@ -883,8 +893,9 @@ void TurnPort::HandleChannelData(int channel_id, const char* data,
 }
 
 void TurnPort::DispatchPacket(const char* data, size_t size,
-    const rtc::SocketAddress& remote_addr,
+    const rtc::SocketAddress& remote_addr, ///< 这是TURN服务器看到的实际对方公网地址
     ProtocolType proto, const rtc::PacketTime& packet_time) {
+  // 把去掉turn头部后的包交给Connection处理
   if (Connection* conn = GetConnection(remote_addr)) {
     conn->OnReadPacket(data, size, packet_time);
   } else {
@@ -1396,7 +1407,7 @@ void TurnChannelBindRequest::OnResponse(StunMessage* response) {
     // Refresh the channel binding just under the permission timeout
     // threshold. The channel binding has a longer lifetime, but
     // this is the easiest way to keep both the channel and the
-    // permission from expiring.
+    // permission from expiring. channel bind也会重发滴
     int delay = TURN_PERMISSION_TIMEOUT - 60000;
     entry_->SendChannelBindRequest(delay);
     LOG_J(LS_INFO, port_) << "Scheduled channel bind in " << delay << "ms.";
@@ -1452,6 +1463,7 @@ int TurnEntry::Send(const void* data, size_t size, bool payload,
   rtc::ByteBufferWriter buf;
   if (state_ != STATE_BOUND) {
     // If we haven't bound the channel yet, we have to use a Send Indication.
+    // Send Indication发送数据，缺点: turn头部数据过长
     TurnMessage msg;
     msg.SetType(TURN_SEND_INDICATION);
     msg.SetTransactionID(
@@ -1464,6 +1476,7 @@ int TurnEntry::Send(const void* data, size_t size, bool payload,
 
     // If we're sending real data, request a channel bind that we can use later.
     if (state_ == STATE_UNBOUND && payload) {
+      // 自动BindChannel
       SendChannelBindRequest(0);
       state_ = STATE_BINDING;
     }
@@ -1473,6 +1486,7 @@ int TurnEntry::Send(const void* data, size_t size, bool payload,
     buf.WriteUInt16(static_cast<uint16_t>(size));
     buf.WriteBytes(reinterpret_cast<const char*>(data), size);
   }
+  // 实际发送数据
   return port_->Send(buf.Data(), buf.Length(), options);
 }
 
@@ -1519,6 +1533,7 @@ void TurnEntry::OnChannelBindSuccess() {
   LOG_J(LS_INFO, port_) << "Channel bind for " << ext_addr_.ToSensitiveString()
                         << " succeeded";
   ASSERT(state_ == STATE_BINDING || state_ == STATE_BOUND);
+  // 将套接口状态设成BOUND,以后可通过channel通道发送数据
   state_ = STATE_BOUND;
 }
 
@@ -1528,7 +1543,7 @@ void TurnEntry::OnChannelBindError(StunMessage* response, int code) {
   // re-establish a new connection if needed.
   if (code == STUN_ERROR_STALE_NONCE) {
     if (port_->UpdateNonce(response)) {
-      // Send channel bind request with fresh nonce.
+      // Send channel bind request with fresh nonce. rebound
       SendChannelBindRequest(0);
     }
   } else {

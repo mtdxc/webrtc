@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2011 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -72,14 +72,14 @@ AsyncPacketSocket* BasicPacketSocketFactory::CreateServerTcpSocket(
     LOG(LS_ERROR) << "TLS support currently is not available.";
     return NULL;
   }
-
+  // 裸套接口
   rtc::AsyncSocket* socket =
       socket_factory()->CreateAsyncSocket(local_address.family(),
                                           SOCK_STREAM);
   if (!socket) {
     return NULL;
   }
-
+  // 绑定地址
   if (BindSocket(socket, local_address, min_port, max_port) < 0) {
     LOG(LS_ERROR) << "TCP bind failed with error "
                   << socket->GetError();
@@ -88,7 +88,7 @@ AsyncPacketSocket* BasicPacketSocketFactory::CreateServerTcpSocket(
   }
 
   // If using SSLTCP, wrap the TCP socket in a pseudo-SSL socket.
-  if (opts & PacketSocketFactory::OPT_SSLTCP) {
+  if (opts & PacketSocketFactory::OPT_SSLTCP) { // SSL套接口马甲
     ASSERT(!(opts & PacketSocketFactory::OPT_TLS));
     socket = new rtc::AsyncSSLSocket(socket);
   }
@@ -97,10 +97,11 @@ AsyncPacketSocket* BasicPacketSocketFactory::CreateServerTcpSocket(
   // See http://go/gtalktcpnodelayexperiment
   socket->SetOption(rtc::Socket::OPT_NODELAY, 1);
 
+  // 增加封包马甲
   if (opts & PacketSocketFactory::OPT_STUN)
     return new cricket::AsyncStunTCPSocket(socket, true);
-
-  return new rtc::AsyncTCPSocket(socket, true);
+  else
+    return new rtc::AsyncTCPSocket(socket, true);
 }
 
 AsyncPacketSocket* BasicPacketSocketFactory::CreateClientTcpSocket(

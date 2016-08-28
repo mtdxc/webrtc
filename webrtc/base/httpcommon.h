@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -292,6 +292,7 @@ struct HttpData {
   typedef HeaderMap::iterator iterator;
 
   HttpVersion version;
+  // http内容
   std::unique_ptr<StreamInterface> document;
 
   HttpData();
@@ -384,6 +385,7 @@ protected:
   void copy(const HttpData& src);
 
 private:
+  /// http头部（采用MultiMap）
   HeaderMap headers_;
 };
 

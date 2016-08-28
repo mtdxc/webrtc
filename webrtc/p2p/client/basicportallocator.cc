@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -186,6 +186,7 @@ BasicPortAllocatorSession::BasicPortAllocatorSession(
       network_manager_started_(false),
       allocation_sequences_created_(false),
       prune_turn_ports_(allocator->prune_turn_ports()) {
+  // 监控网络变更事件
   allocator_->network_manager()->SignalNetworksChanged.connect(
       this, &BasicPortAllocatorSession::OnNetworksChanged);
   allocator_->network_manager()->StartUpdating();
@@ -201,7 +202,7 @@ BasicPortAllocatorSession::~BasicPortAllocatorSession() {
     // ports are destroyed.
     sequences_[i]->Clear();
   }
-
+  // port的生存期在本类中管理
   std::vector<PortData>::iterator it;
   for (it = ports_.begin(); it != ports_.end(); it++)
     delete it->port();
@@ -469,8 +470,7 @@ void BasicPortAllocatorSession::OnConfigStop() {
   for (std::vector<PortData>::iterator it = ports_.begin();
        it != ports_.end(); ++it) {
     if (it->inprogress()) {
-      // Updating port state to error, which didn't finish allocating candidates
-      // yet.
+      // Updating port state to error, which didn't finish allocating candidates yet.
       it->set_error();
       send_signal = true;
     }
@@ -577,12 +577,12 @@ void BasicPortAllocatorSession::DoAllocate() {
       // Disable phases that would only create ports equivalent to
       // ones that we have already made.
       DisableEquivalentPhases(networks[i], config, &sequence_flags);
-
+      // 略过已创建的 seq
       if ((sequence_flags & DISABLE_ALL_PHASES) == DISABLE_ALL_PHASES) {
         // New AllocationSequence would have nothing to do, so don't make it.
         continue;
       }
-
+      
       AllocationSequence* sequence =
           new AllocationSequence(this, networks[i], config, sequence_flags);
       if (!sequence->Init()) {
@@ -630,6 +630,7 @@ void BasicPortAllocatorSession::DisableEquivalentPhases(
   for (uint32_t i = 0; i < sequences_.size() &&
                            (*flags & DISABLE_ALL_PHASES) != DISABLE_ALL_PHASES;
        ++i) {
+    // sequence会判断是否为自己网卡，如是，则禁用自己负责的turnport流程，并从flag中返回
     sequences_[i]->DisableEquivalentPhases(network, config, flags);
   }
 }
@@ -914,8 +915,7 @@ void BasicPortAllocatorSession::MaybeSignalCandidatesAllocationDone() {
   }
 }
 
-void BasicPortAllocatorSession::OnPortDestroyed(
-    PortInterface* port) {
+void BasicPortAllocatorSession::OnPortDestroyed(PortInterface* port) {
   ASSERT(rtc::Thread::Current() == network_thread_);
   for (std::vector<PortData>::iterator iter = ports_.begin();
        iter != ports_.end(); ++iter) {
@@ -988,8 +988,10 @@ AllocationSequence::AllocationSequence(BasicPortAllocatorSession* session,
 
 bool AllocationSequence::Init() {
   if (IsFlagSet(PORTALLOCATOR_ENABLE_SHARED_SOCKET)) {
+    // 共享套接口居然是由sequence根据网卡地址来创建的!
     udp_socket_.reset(session_->socket_factory()->CreateUdpSocket(
-        rtc::SocketAddress(ip_, 0), session_->allocator()->min_port(),
+        rtc::SocketAddress(ip_, 0), 
+        session_->allocator()->min_port(),
         session_->allocator()->max_port()));
     if (udp_socket_) {
       udp_socket_->SignalReadPacket.connect(
@@ -1026,7 +1028,7 @@ void AllocationSequence::DisableEquivalentPhases(rtc::Network* network,
   }
 
   if (!((network == network_) && (ip_ == network->GetBestIP()))) {
-    // Different network setup; nothing is equivalent.
+    // Different network setup; nothing is equivalent. 非本网卡的不处理
     return;
   }
 
@@ -1046,7 +1048,7 @@ void AllocationSequence::DisableEquivalentPhases(rtc::Network* network,
       // NOTE: This will even skip a _different_ set of relay servers if we
       // were to be given one, but that never happens in our codebase. Should
       // probably get rid of the list in PortConfiguration and just keep a
-      // single relay server in each one.
+      // single relay server in each one. 我们已经启用中继了就不用再启用了
       *flags |= PORTALLOCATOR_DISABLE_RELAY;
     }
   }
@@ -1074,8 +1076,7 @@ void AllocationSequence::OnMessage(rtc::Message* msg) {
   };
 
   // Perform all of the phases in the current step.
-  LOG_J(LS_INFO, network_) << "Allocation Phase="
-                           << PHASE_NAMES[phase_];
+  LOG_J(LS_INFO, network_) << "Allocation Phase=" << PHASE_NAMES[phase_];
 
   switch (phase_) {
     case PHASE_UDP:
@@ -1103,7 +1104,7 @@ void AllocationSequence::OnMessage(rtc::Message* msg) {
   }
 
   if (state() == kRunning) {
-    ++phase_;
+    ++phase_; ///< 移到下一阶段
     session_->network_thread()->PostDelayed(RTC_FROM_HERE,
                                             session_->allocator()->step_delay(),
                                             this, MSG_ALLOCATION_PHASE);

@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2014 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -31,6 +31,7 @@ class AsyncClosure : public RefCountInterface {
  public:
   // Runs the asynchronous task, and triggers a callback to the calling
   // thread if needed. Should be called from the target thread.
+  // 在目的线程中调用异步任务，必要时触发到调用线程的回调
   virtual void Execute() = 0;
  protected:
   ~AsyncClosure() override {}
@@ -73,6 +74,7 @@ class NotifyingAsyncClosureBase : public AsyncClosure,
   Location callback_posted_from_;
   Callback0<void> callback_;
   CriticalSection crit_;
+  // 调用线程,没了代表线程退出或被取消
   Thread* calling_thread_;
 
   void CancelCallback();
@@ -103,12 +105,14 @@ class NotifyingAsyncClosure : public NotifyingAsyncClosureBase {
   }
 
  private:
+  // 调用函数
   FunctorT functor_;
+  // 回调函数
   void (HostT::*callback_)(ReturnT);
   HostT* callback_host_;
 };
 
-// Closures that have a void return value and require a callback.
+// Closures that have a void return value and require a callback. 无参数的模板特化
 template <class FunctorT, class HostT>
 class NotifyingAsyncClosure<void, FunctorT, HostT>
     : public NotifyingAsyncClosureBase {

@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -30,13 +30,13 @@ const int MAX_LIFETIME = 15 * 60 * 1000;
 const uint32_t USERNAME_LENGTH = 16;
 
 // Calls SendTo on the given socket and logs any bad results.
-void Send(rtc::AsyncPacketSocket* socket, const char* bytes, size_t size,
+void Send(rtc::AsyncPacketSocket* socket, 
+          const char* bytes, size_t size,
           const rtc::SocketAddress& addr) {
   rtc::PacketOptions options;
   int result = socket->SendTo(bytes, size, addr, options);
   if (result < static_cast<int>(size)) {
-    LOG(LS_ERROR) << "SendTo wrote only " << result << " of " << size
-                  << " bytes";
+    LOG(LS_ERROR) << "SendTo wrote only " << result << " of " << size << " bytes";
   } else if (result < 0) {
     LOG_ERR(LS_ERROR) << "SendTo";
   }
@@ -133,8 +133,7 @@ void RelayServer::RemoveExternalSocket(rtc::AsyncPacketSocket* socket) {
 
 void RelayServer::AddInternalServerSocket(rtc::AsyncSocket* socket,
                                           cricket::ProtocolType proto) {
-  ASSERT(server_sockets_.end() ==
-         server_sockets_.find(socket));
+  ASSERT(server_sockets_.end() == server_sockets_.find(socket));
   server_sockets_[socket] = proto;
   socket->SignalReadEvent.connect(this, &RelayServer::OnReadEvent);
 }
@@ -179,7 +178,8 @@ void RelayServer::OnReadEvent(rtc::AsyncSocket* socket) {
 }
 
 void RelayServer::OnInternalPacket(
-    rtc::AsyncPacketSocket* socket, const char* bytes, size_t size,
+    rtc::AsyncPacketSocket* socket, 
+    const char* bytes, size_t size,
     const rtc::SocketAddress& remote_addr,
     const rtc::PacketTime& packet_time) {
 
@@ -197,7 +197,7 @@ void RelayServer::OnInternalPacket(
 
   RelayServerConnection* int_conn = piter->second;
 
-  // Handle STUN requests to the server itself.
+  // Handle STUN requests to the server itself. STUN头部里面继续加STUN头部？
   if (int_conn->binding()->HasMagicCookie(bytes, size)) {
     HandleStun(int_conn, bytes, size);
     return;
@@ -205,13 +205,13 @@ void RelayServer::OnInternalPacket(
 
   // Otherwise, this is a non-wrapped packet that we are to forward.  Make sure
   // that this connection has been locked.  (Otherwise, we would not know what
-  // address to forward to.)
+  // address to forward to.) 源方和目的放都为lock才进行直接转发
   if (!int_conn->locked()) {
     LOG(LS_WARNING) << "Dropping packet: connection not locked";
     return;
   }
 
-  // Forward this to the destination address into the connection.
+  // Forward this to the destination address into the connection. 取得连接目的地址
   RelayServerConnection* ext_conn = int_conn->binding()->GetExternalConnection(
       int_conn->default_destination());
   if (ext_conn && ext_conn->locked()) {
@@ -237,9 +237,9 @@ void RelayServer::OnExternalPacket(
   if (piter != connections_.end()) {
     // TODO: Check the HMAC.
     RelayServerConnection* ext_conn = piter->second;
+    // 查找路由表，找对InternalSocket，并转发数据
     RelayServerConnection* int_conn =
-        ext_conn->binding()->GetInternalConnection(
-            ext_conn->addr_pair().source());
+        ext_conn->binding()->GetInternalConnection(ext_conn->addr_pair().source());
     ASSERT(int_conn != NULL);
     int_conn->Send(bytes, size, ext_conn->addr_pair().source());
     ext_conn->Lock();  // allow outgoing packets
@@ -256,8 +256,7 @@ void RelayServer::OnExternalPacket(
   }
 
   // The initial packet should have a username (which identifies the binding).
-  const StunByteStringAttribute* username_attr =
-      msg.GetByteString(STUN_ATTR_USERNAME);
+  const StunByteStringAttribute* username_attr = msg.GetByteString(STUN_ATTR_USERNAME);
   if (!username_attr) {
     LOG(LS_WARNING) << "Dropping packet: no username";
     return;
@@ -275,9 +274,8 @@ void RelayServer::OnExternalPacket(
     return;
   }
 
-  // Add this authenticted connection to the binding.
-  RelayServerConnection* ext_conn =
-      new RelayServerConnection(biter->second, ap, socket);
+  // Add this authenticted connection to the binding. 
+  RelayServerConnection* ext_conn = new RelayServerConnection(biter->second, ap, socket);
   ext_conn->binding()->AddExternalConnection(ext_conn);
   AddConnection(ext_conn);
 
@@ -293,9 +291,9 @@ void RelayServer::OnExternalPacket(
 }
 
 bool RelayServer::HandleStun(
-    const char* bytes, size_t size, const rtc::SocketAddress& remote_addr,
-    rtc::AsyncPacketSocket* socket, std::string* username,
-    StunMessage* msg) {
+    const char* bytes, size_t size, 
+    const rtc::SocketAddress& remote_addr, rtc::AsyncPacketSocket* socket, 
+    std::string* username, StunMessage* msg) {
 
   // Parse this into a stun message. Eat the message if this fails.
   rtc::ByteBufferReader buf(bytes, size);
@@ -304,8 +302,7 @@ bool RelayServer::HandleStun(
   }
 
   // The initial packet should have a username (which identifies the binding).
-  const StunByteStringAttribute* username_attr =
-      msg->GetByteString(STUN_ATTR_USERNAME);
+  const StunByteStringAttribute* username_attr = msg->GetByteString(STUN_ATTR_USERNAME);
   if (!username_attr) {
     SendStunError(*msg, socket, remote_addr, 432, "Missing Username", "");
     return false;
@@ -316,12 +313,12 @@ bool RelayServer::HandleStun(
     username->append(username_attr->bytes(), username_attr->length());
 
   // TODO: Check for unknown attributes (<= 0x7fff)
-
   return true;
 }
 
 void RelayServer::HandleStunAllocate(
-    const char* bytes, size_t size, const rtc::SocketAddressPair& ap,
+    const char* bytes, size_t size, 
+    const rtc::SocketAddressPair& ap,
     rtc::AsyncPacketSocket* socket) {
 
   // Make sure this is a valid STUN request.
@@ -344,7 +341,7 @@ void RelayServer::HandleStunAllocate(
   // TODO: Check the HMAC.
 
   // Find or create the binding for this username.
-
+  // 没有则根据username新建一个bind(并携带超时时间)
   RelayServerBinding* binding;
 
   BindingMap::iterator biter = bindings_.find(username);
@@ -356,8 +353,7 @@ void RelayServer::HandleStunAllocate(
 
     // Compute the appropriate lifetime for this binding.
     int lifetime = MAX_LIFETIME;
-    const StunUInt32Attribute* lifetime_attr =
-        request.GetUInt32(STUN_ATTR_LIFETIME);
+    const StunUInt32Attribute* lifetime_attr = request.GetUInt32(STUN_ATTR_LIFETIME);
     if (lifetime_attr)
       lifetime =
           std::min(lifetime, static_cast<int>(lifetime_attr->value() * 1000));
@@ -373,8 +369,7 @@ void RelayServer::HandleStunAllocate(
   }
 
   // Add this connection to the binding.  It starts out unlocked.
-  RelayServerConnection* int_conn =
-      new RelayServerConnection(binding, ap, socket);
+  RelayServerConnection* int_conn = new RelayServerConnection(binding, ap, socket);
   binding->AddInternalConnection(int_conn);
   AddConnection(int_conn);
 
@@ -424,11 +419,11 @@ void RelayServer::HandleStunAllocate(
   magic_cookie_attr->CopyBytes(int_conn->binding()->magic_cookie().c_str(),
                                int_conn->binding()->magic_cookie().size());
   response.AddAttribute(magic_cookie_attr);
-
+  // 随机找个turn服务器
   size_t index = rand() % external_sockets_.size();
   rtc::SocketAddress ext_addr =
       external_sockets_[index]->GetLocalAddress();
-
+  // 将stun反射地址直接设成turn中转地址
   StunAddressAttribute* addr_attr =
       StunAttribute::CreateAddress(STUN_ATTR_MAPPED_ADDRESS);
   addr_attr->SetIP(ext_addr.ipaddr());
@@ -482,10 +477,11 @@ void RelayServer::HandleStunSend(
   if (ext_conn->locked())
     ext_conn->Send(data_attr->bytes(), data_attr->length());
 
-  const StunUInt32Attribute* options_attr =
-      request.GetUInt32(STUN_ATTR_OPTIONS);
+  const StunUInt32Attribute* options_attr = request.GetUInt32(STUN_ATTR_OPTIONS);
   if (options_attr && (options_attr->value() & 0x01)) {
+    // 设置InternalSocket的缺省地址
     int_conn->set_default_destination(ext_addr);
+    // 允许中转
     int_conn->Lock();
 
     RelayMessage response;
@@ -551,8 +547,7 @@ void RelayServer::OnTimeout(RelayServerBinding* binding) {
 void RelayServer::AcceptConnection(rtc::AsyncSocket* server_socket) {
   // Check if someone is trying to connect to us.
   rtc::SocketAddress accept_addr;
-  rtc::AsyncSocket* accepted_socket =
-      server_socket->Accept(&accept_addr);
+  rtc::AsyncSocket* accepted_socket = server_socket->Accept(&accept_addr);
   if (accepted_socket != NULL) {
     // We had someone trying to connect, now check which protocol to
     // use and create a packet socket.
@@ -561,8 +556,7 @@ void RelayServer::AcceptConnection(rtc::AsyncSocket* server_socket) {
     if (server_sockets_[server_socket] == cricket::PROTO_SSLTCP) {
       accepted_socket = new rtc::AsyncSSLServerSocket(accepted_socket);
     }
-    rtc::AsyncTCPSocket* tcp_socket =
-        new rtc::AsyncTCPSocket(accepted_socket, false);
+    rtc::AsyncTCPSocket* tcp_socket = new rtc::AsyncTCPSocket(accepted_socket, false);
 
     // Finally add the socket so it can start communicating with the client.
     AddInternalSocket(tcp_socket);
@@ -585,7 +579,7 @@ RelayServerConnection::~RelayServerConnection() {
 void RelayServerConnection::Send(const char* data, size_t size) {
   // Note that the binding has been used again.
   binding_->NoteUsed();
-
+  // 发送成功后再设置binding是否会更好?
   cricket::Send(socket_, data, size, addr_pair_.source());
 }
 
@@ -636,7 +630,8 @@ void RelayServerConnection::SendStunError(
   // occurs, we want it to be cleaned up even if errors are still occuring.
 
   cricket::SendStunError(
-      request, socket_, addr_pair_.source(), error_code, error_desc,
+      request, socket_, addr_pair_.source(), 
+      error_code, error_desc,
       binding_->magic_cookie());
 }
 

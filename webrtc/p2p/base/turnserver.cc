@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2012 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -61,11 +61,13 @@ class TurnServerAllocation::Permission : public rtc::MessageHandler {
   ~Permission();
 
   const rtc::IPAddress& peer() const { return peer_; }
+  // 启动超时计数器
   void Refresh();
-
+  // 自我释放前回调
   sigslot::signal1<Permission*> SignalDestroyed;
 
  private:
+  // 处理超时，并进行自我释放
   virtual void OnMessage(rtc::Message* msg);
 
   rtc::Thread* thread_;
@@ -77,17 +79,18 @@ class TurnServerAllocation::Permission : public rtc::MessageHandler {
 // allocation, and self-deletes when its lifetime timer expires.
 class TurnServerAllocation::Channel : public rtc::MessageHandler {
  public:
-  Channel(rtc::Thread* thread, int id,
-                     const rtc::SocketAddress& peer);
+  Channel(rtc::Thread* thread, int id, const rtc::SocketAddress& peer);
   ~Channel();
 
   int id() const { return id_; }
   const rtc::SocketAddress& peer() const { return peer_; }
+  // 触发超时定时器
   void Refresh();
-
+  // 自我释放前回调
   sigslot::signal1<Channel*> SignalDestroyed;
 
  private:
+  // 处理超时，并进行自我释放
   virtual void OnMessage(rtc::Message* msg);
 
   rtc::Thread* thread_;
@@ -228,8 +231,7 @@ void TurnServer::HandleStunMessage(TurnServerConnection* conn, const char* data,
   if (redirect_hook_ != NULL && msg.type() == STUN_ALLOCATE_REQUEST) {
     rtc::SocketAddress address;
     if (redirect_hook_->ShouldRedirect(conn->src(), &address)) {
-      SendErrorResponseWithAlternateServer(
-          conn, &msg, address);
+      SendErrorResponseWithAlternateServer(conn, &msg, address);
       return;
     }
   }
@@ -338,6 +340,7 @@ bool TurnServer::CheckAuthorization(TurnServerConnection* conn,
   }
 
   if (allocation) {
+    // 更新notice
     allocation->set_last_nonce(nonce_attr->GetString());
   }
   // Success.
@@ -679,8 +682,7 @@ void TurnServerAllocation::HandleRefreshRequest(const TurnMessage* msg) {
 void TurnServerAllocation::HandleSendIndication(const TurnMessage* msg) {
   // Check mandatory attributes.
   const StunByteStringAttribute* data_attr = msg->GetByteString(STUN_ATTR_DATA);
-  const StunAddressAttribute* peer_attr =
-      msg->GetAddress(STUN_ATTR_XOR_PEER_ADDRESS);
+  const StunAddressAttribute* peer_attr = msg->GetAddress(STUN_ATTR_XOR_PEER_ADDRESS);
   if (!data_attr || !peer_attr) {
     LOG_J(LS_WARNING, this) << "Received invalid send indication";
     return;

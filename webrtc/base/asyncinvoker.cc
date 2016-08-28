@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2014 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -122,6 +122,7 @@ NotifyingAsyncClosureBase::~NotifyingAsyncClosureBase() {
 void NotifyingAsyncClosureBase::TriggerCallback() {
   CritScope cs(&crit_);
   if (!CallbackCanceled() && !callback_.empty()) {
+    // 采用FireAndForget方式在调用线程触发回调
     invoker_->AsyncInvoke<void>(callback_posted_from_, calling_thread_,
                                 callback_);
   }

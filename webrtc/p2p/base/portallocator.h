@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -145,6 +145,7 @@ class PortAllocatorSession : public sigslot::has_slots<> {
 
   uint32_t flags() const { return flags_; }
   void set_flags(uint32_t flags) { flags_ = flags; }
+
   std::string content_name() const { return content_name_; }
   int component() const { return component_; }
   const std::string& ice_ufrag() const { return ice_ufrag_; }
@@ -256,6 +257,11 @@ class PortAllocatorSession : public sigslot::has_slots<> {
 //
 // This allows constructing a PortAllocator subclass on one thread and
 // passing it into an object that uses it on a different thread.
+/*!
+@brief Port分配器.
+只是个马甲，实际干活的都是CreateSession创建出来的PortAllocatorSession
+主要存储一些供PortAllocatorSession初始化的一些配置变量.
+*/
 class PortAllocator : public sigslot::has_slots<> {
  public:
   PortAllocator() :

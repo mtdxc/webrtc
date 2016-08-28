@@ -38,7 +38,9 @@ class MouseCursor {
   const DesktopVector& hotspot() const { return hotspot_; }
 
  private:
+  // 光标图像
   std::unique_ptr<DesktopFrame> image_;
+  // 光标位置/原点?
   DesktopVector hotspot_;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(MouseCursor);

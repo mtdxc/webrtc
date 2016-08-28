@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -92,9 +92,9 @@ class AsyncTCPSocket : public AsyncTCPSocketBase {
                                 const SocketAddress& remote_address);
   AsyncTCPSocket(AsyncSocket* socket, bool listen);
   ~AsyncTCPSocket() override {}
-
-  int Send(const void* pv,
-           size_t cb,
+  // 此函数会自动加入一个2字节的长度头部并发送出去（最大长度64k）
+  int Send(const void* pv,  ///< 不包含长度的裸应用数据
+           size_t cb, ///< pv数据长度，大小不能超过64k
            const rtc::PacketOptions& options) override;
   void ProcessInput(char* data, size_t* len) override;
   void HandleIncomingConnection(AsyncSocket* socket) override;

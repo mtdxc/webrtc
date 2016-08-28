@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2004 The WebRTC Project Authors. All rights reserved.
  *
  *  Use of this source code is governed by a BSD-style license
@@ -279,6 +279,13 @@ class Transport : public sigslot::has_slots<> {
   std::unique_ptr<rtc::SSLCertificate> GetRemoteSSLCertificate();
 
   // Create, destroy, and lookup the channels of this type by their components.
+  /**
+  @brief 创建通道.
+  查找现有的Channel，没有则调用 CreateTransportChannel
+  应用Channel参数，然后调用Connect(必要时 connect_requested_)
+  @param component 查找时用的key
+  @return Channel对象
+  */
   TransportChannelImpl* CreateChannel(int component);
 
   TransportChannelImpl* GetChannel(int component);

@@ -44,5 +44,15 @@ static void JNI_VideoTrack_FreeSink(JNIEnv* jni, jlong j_native_sink) {
   delete reinterpret_cast<rtc::VideoSinkInterface<VideoFrame>*>(j_native_sink);
 }
 
+static void JNI_VideoTrack_SetContentHint(JNIEnv* jni,
+                                      jlong j_native_track,
+                                      jint val) {
+  reinterpret_cast<VideoTrackInterface*>(j_native_track)->set_content_hint((webrtc::VideoTrackInterface::ContentHint)val);
+}
+
+static jint JNI_VideoTrack_GetContentHint(JNIEnv* jni,
+                                      jlong j_native_track) {
+  return (int)reinterpret_cast<VideoTrackInterface*>(j_native_track)->content_hint();
+}
 }  // namespace jni
 }  // namespace webrtc

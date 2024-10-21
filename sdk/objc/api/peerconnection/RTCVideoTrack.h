@@ -25,6 +25,8 @@ RTC_OBJC_EXPORT
 /** The video source for this video track. */
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCVideoSource) *source;
 
+@property(nonatomic, assign) int contentHint;
+
 - (instancetype)init NS_UNAVAILABLE;
 
 /** Register a renderer that will render all frames received on this track. */

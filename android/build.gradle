@@ -16,7 +16,7 @@ plugins {
 ext {
     groupId = 'org.jitsi'
     webrtcVersion = '124'
-    libraryVersion = '124.0.0'
+    libraryVersion = '124.0.2'
 }
 
 apply plugin: 'com.android.library'
@@ -86,10 +86,10 @@ afterEvaluate {
                 pom {
                     name = 'Jitsi WebRTC build for Android'
                     description = "WebRTC M${project.ext.webrtcVersion} builds for Android"
-                    url = 'https://github.com/jitsi/webrtc'
+                    url = 'https://github.com/mtdxc/webrtc'
 
                     scm {
-                        url = 'https://github.com/jitsi/webrtc'
+                        url = 'https://github.com/mtdxc/webrtc'
                     }
 
                     licenses {

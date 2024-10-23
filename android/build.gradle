@@ -14,7 +14,7 @@ plugins {
 }
 
 ext {
-    groupId = 'org.jitsi'
+    groupId = 'io.github.mtdxc'
     webrtcVersion = '124'
     libraryVersion = '124.0.2'
 }
@@ -84,7 +84,7 @@ afterEvaluate {
                 version = project.ext.libraryVersion
 
                 pom {
-                    name = 'Jitsi WebRTC build for Android'
+                    name = 'mWebRTC build for Android'
                     description = "WebRTC M${project.ext.webrtcVersion} builds for Android"
                     url = 'https://github.com/mtdxc/webrtc'
 
@@ -105,9 +105,9 @@ afterEvaluate {
 
                     developers {
                         developer {
-                            id = 'org.jitsi'
-                            name = 'Jitsi Team'
-                            email = 'dev@jitsi.org'
+                            id = 'io.github.mtdxc'
+                            name = 'mtdxc Team'
+                            email = 'dev@mtdxc.org'
                         }
                     }
                 }
@@ -118,8 +118,8 @@ afterEvaluate {
             maven {
                 url = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
                 credentials {
-                    username System.env.SONATYPE_USER
-                    password System.env.SONATYPE_PW
+                    username 'mtdxc'
+                    password 'cqm@1983'
                 }
             }
         }

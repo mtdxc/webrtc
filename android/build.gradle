@@ -16,7 +16,7 @@ plugins {
 ext {
     groupId = 'io.github.mtdxc'
     webrtcVersion = '124'
-    libraryVersion = '124.0.2'
+    libraryVersion = '124.0.3'
 }
 
 apply plugin: 'com.android.library'

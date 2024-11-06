@@ -157,7 +157,7 @@ def sync(target_dir, platform):
     sh('gclient sync -D', env)
 
 
-def build(target_dir, platform, debug):
+def build(target_dir, platform, debug, clean):
     build_dir = os.path.join(target_dir, 'build', platform)
     build_type = 'Debug' if debug else 'Release'
     depot_tools_dir = os.path.join(target_dir, 'depot_tools')
@@ -181,7 +181,8 @@ def build(target_dir, platform, debug):
     os.chdir(webrtc_dir)
 
     # Cleanup old build
-    rmr('out')
+    if clean:
+        rmr('out')
 
     # Run GN
     if platform == 'ios':
@@ -221,7 +222,8 @@ def build(target_dir, platform, debug):
             sh(ninja_cmd, env)
 
     # Cleanup build dir
-    rmr(build_dir)
+    if clean:
+        rmr(build_dir)
     mkdirp(build_dir)
 
     # Copy build artifacts to build directory
@@ -325,6 +327,7 @@ if __name__ == "__main__":
     parser.add_argument('dir', help='Target directory')
     parser.add_argument('--setup', help='Prepare the target directory for building', action='store_true')
     parser.add_argument('--build', help='Build WebRTC in the target directory', action='store_true')
+    parser.add_argument('--rebuild', help='Build WebRTC in the target directory', action='store_true')
     parser.add_argument('--sync', help='Runs gclient sync on the WebRTC directory', action='store_true')
     parser.add_argument('--ios', help='Use iOS as the target platform', action='store_true')
     parser.add_argument('--android', help='Use Android as the target platform', action='store_true')
@@ -332,11 +335,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if not (args.setup or args.build or args.sync):
+    if not (args.setup or args.build or args.rebuild or args.sync):
         print('--setup or --build must be specified!')
         sys.exit(1)
 
-    if args.setup and args.build:
+    if args.setup and (args.build or args.rebuild):
         print('--setup and --build cannot be specified at the same time!')
         sys.exit(1)
 
@@ -366,6 +369,11 @@ if __name__ == "__main__":
         sys.exit(0)
 
     if args.build:
-        build(target_dir, platform, args.debug)
+        build(target_dir, platform, args.debug, False)
+        print('WebRTC build for %s completed in %s' % (platform, target_dir))
+        sys.exit(0)
+
+    if args.rebuild:
+        build(target_dir, platform, args.debug, True)
         print('WebRTC build for %s completed in %s' % (platform, target_dir))
         sys.exit(0)

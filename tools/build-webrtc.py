@@ -156,8 +156,7 @@ def sync(target_dir, platform):
 
     sh('gclient sync -D', env)
 
-
-def build(target_dir, platform, debug):
+def build(target_dir, platform, debug, clean):
     build_dir = os.path.join(target_dir, 'build', platform)
     build_type = 'Debug' if debug else 'Release'
     depot_tools_dir = os.path.join(target_dir, 'depot_tools')
@@ -181,7 +180,8 @@ def build(target_dir, platform, debug):
     os.chdir(webrtc_dir)
 
     # Cleanup old build
-    rmr('out')
+    if clean:
+        rmr('out')
 
     # Run GN
     if platform == 'ios':
@@ -230,9 +230,9 @@ def build(target_dir, platform, debug):
         simulators = [item for item in IOS_BUILD_ARCHS if item.startswith('simulator')]
         tenv, arch = simulators[0].split(':')
         gn_out_dir = 'out/%s-ios-%s-%s' % (build_type, tenv, arch)
-
-        shutil.copytree(os.path.join(gn_out_dir, APPLE_FRAMEWORK_NAME), os.path.join(gn_out_dir, 'fat-' + APPLE_FRAMEWORK_NAME))
-        out_lib_path = os.path.join(gn_out_dir, 'fat-' + APPLE_FRAMEWORK_NAME, 'WebRTC')
+        ios_out_dir = os.path.join(build_dir, "ios")
+        shutil.copytree(os.path.join(gn_out_dir, APPLE_FRAMEWORK_NAME), os.path.join(ios_out_dir, APPLE_FRAMEWORK_NAME))
+        out_lib_path = os.path.join(ios_out_dir, APPLE_FRAMEWORK_NAME, 'WebRTC')
         slice_paths = []
         for item in simulators:
             tenv, arch = item.split(':')
@@ -240,15 +240,9 @@ def build(target_dir, platform, debug):
             slice_paths.append(lib_path)
         sh('lipo %s -create -output %s' % (' '.join(slice_paths), out_lib_path))
 
-        orig_framework_path = os.path.join(gn_out_dir, APPLE_FRAMEWORK_NAME)
-        bak_framework_path = os.path.join(gn_out_dir, 'bak-' + APPLE_FRAMEWORK_NAME)
-        fat_framework_path = os.path.join(gn_out_dir, 'fat-' + APPLE_FRAMEWORK_NAME)
-        shutil.move(orig_framework_path, bak_framework_path)
-        shutil.move(fat_framework_path, orig_framework_path)
-
         # dSYMs
-        shutil.copytree(os.path.join(gn_out_dir, APPLE_DSYM_NAME), os.path.join(gn_out_dir, 'fat-' + APPLE_DSYM_NAME))
-        out_dsym_path = os.path.join(gn_out_dir, 'fat-' + APPLE_DSYM_NAME, 'Contents', 'Resources', 'DWARF', 'WebRTC')
+        shutil.copytree(os.path.join(gn_out_dir, APPLE_DSYM_NAME), os.path.join(ios_out_dir, APPLE_DSYM_NAME))
+        out_dsym_path = os.path.join(ios_out_dir, APPLE_DSYM_NAME, 'Contents', 'Resources', 'DWARF', 'WebRTC')
         slice_paths = []
         for item in simulators:
             tenv, arch = item.split(':')
@@ -256,35 +250,24 @@ def build(target_dir, platform, debug):
             slice_paths.append(dsym_path)
         sh('lipo %s -create -output %s' % (' '.join(slice_paths), out_dsym_path))
 
-        orig_dsym_path = os.path.join(gn_out_dir, APPLE_DSYM_NAME)
-        bak_dsym_path = os.path.join(gn_out_dir, 'bak-' + APPLE_DSYM_NAME)
-        fat_dsym_path = os.path.join(gn_out_dir, 'fat-' + APPLE_DSYM_NAME)
-        shutil.move(orig_dsym_path, bak_dsym_path)
-        shutil.move(fat_dsym_path, orig_dsym_path)
-
         _IOS_BUILD_ARCHS = [item for item in IOS_BUILD_ARCHS if not item.startswith('simulator')]
         _IOS_BUILD_ARCHS.append(simulators[0])
 
         # Fat macOS Framework (macos-arm64_x86_64)
         gn_out_dir = 'out/%s-macos-%s' % (build_type, MACOS_BUILD_ARCHS[0])
+        mac_out_dir = os.path.join(build_dir, "macosx")
 
-        shutil.copytree(os.path.join(gn_out_dir, APPLE_FRAMEWORK_NAME), os.path.join(gn_out_dir, 'fat-' + APPLE_FRAMEWORK_NAME), symlinks=True)
-        out_lib_path = os.path.join(gn_out_dir, 'fat-' + APPLE_FRAMEWORK_NAME, 'Versions', 'Current', 'WebRTC')
+        shutil.copytree(os.path.join(gn_out_dir, APPLE_FRAMEWORK_NAME), os.path.join(mac_out_dir, APPLE_FRAMEWORK_NAME), symlinks=True)
+        out_lib_path = os.path.join(mac_out_dir, APPLE_FRAMEWORK_NAME, 'Versions', 'Current', 'WebRTC')
         slice_paths = []
         for arch in MACOS_BUILD_ARCHS:
             lib_path = os.path.join('out/%s-macos-%s' % (build_type, arch), APPLE_FRAMEWORK_NAME, 'Versions', 'Current', 'WebRTC')
             slice_paths.append(lib_path)
         sh('lipo %s -create -output %s' % (' '.join(slice_paths), out_lib_path))
 
-        orig_framework_path = os.path.join(gn_out_dir, APPLE_FRAMEWORK_NAME)
-        bak_framework_path = os.path.join(gn_out_dir, 'bak-' + APPLE_FRAMEWORK_NAME)
-        fat_framework_path = os.path.join(gn_out_dir, 'fat-' + APPLE_FRAMEWORK_NAME)
-        shutil.move(orig_framework_path, bak_framework_path)
-        shutil.move(fat_framework_path, orig_framework_path)
-
         # dSYMs
-        shutil.copytree(os.path.join(gn_out_dir, APPLE_DSYM_NAME), os.path.join(gn_out_dir, 'fat-' + APPLE_DSYM_NAME))
-        out_dsym_path = os.path.join(gn_out_dir, 'fat-' + APPLE_DSYM_NAME, 'Contents', 'Resources', 'DWARF', 'WebRTC')
+        shutil.copytree(os.path.join(gn_out_dir, APPLE_DSYM_NAME), os.path.join(mac_out_dir, APPLE_DSYM_NAME))
+        out_dsym_path = os.path.join(mac_out_dir, APPLE_DSYM_NAME, 'Contents', 'Resources', 'DWARF', 'WebRTC')
         slice_paths = []
         for arch in MACOS_BUILD_ARCHS:
             dsym_path = os.path.join('out/%s-macos-%s' % (build_type, arch), APPLE_DSYM_NAME, 'Contents', 'Resources', 'DWARF', 'WebRTC')
@@ -302,8 +285,8 @@ def build(target_dir, platform, debug):
             xcodebuild_cmd += ' -debug-symbols %s' % os.path.abspath(os.path.join(gn_out_dir, APPLE_DSYM_NAME))
         ## macOS (single fat slice)
         gn_out_dir = 'out/%s-macos-%s' % (build_type, MACOS_BUILD_ARCHS[0])
-        xcodebuild_cmd += ' -framework %s' % os.path.abspath(os.path.join(gn_out_dir, APPLE_FRAMEWORK_NAME))
-        xcodebuild_cmd += ' -debug-symbols %s' % os.path.abspath(os.path.join(gn_out_dir, APPLE_DSYM_NAME))
+        xcodebuild_cmd += ' -framework %s' % os.path.abspath(os.path.join(mac_out_dir, APPLE_FRAMEWORK_NAME))
+        xcodebuild_cmd += ' -debug-symbols %s' % os.path.abspath(os.path.join(mac_out_dir, APPLE_DSYM_NAME))
         sh(xcodebuild_cmd)
         sh('zip -r WebRTC.xcframework.zip WebRTC.xcframework', cwd=build_dir)
         rmr(xcframework_path)
@@ -325,6 +308,7 @@ if __name__ == "__main__":
     parser.add_argument('dir', help='Target directory')
     parser.add_argument('--setup', help='Prepare the target directory for building', action='store_true')
     parser.add_argument('--build', help='Build WebRTC in the target directory', action='store_true')
+    parser.add_argument('--rebuild', help='Build WebRTC in the target directory', action='store_true')
     parser.add_argument('--sync', help='Runs gclient sync on the WebRTC directory', action='store_true')
     parser.add_argument('--ios', help='Use iOS as the target platform', action='store_true')
     parser.add_argument('--android', help='Use Android as the target platform', action='store_true')
@@ -332,11 +316,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if not (args.setup or args.build or args.sync):
+    if not (args.setup or args.build or args.rebuild or args.sync):
         print('--setup or --build must be specified!')
         sys.exit(1)
 
-    if args.setup and args.build:
+    if args.setup and (args.build or args.rebuild):
         print('--setup and --build cannot be specified at the same time!')
         sys.exit(1)
 
@@ -366,6 +350,11 @@ if __name__ == "__main__":
         sys.exit(0)
 
     if args.build:
-        build(target_dir, platform, args.debug)
+        build(target_dir, platform, args.debug, False)
+        print('WebRTC build for %s completed in %s' % (platform, target_dir))
+        sys.exit(0)
+
+    if args.rebuild:
+        build(target_dir, platform, args.debug, True)
         print('WebRTC build for %s completed in %s' % (platform, target_dir))
         sys.exit(0)

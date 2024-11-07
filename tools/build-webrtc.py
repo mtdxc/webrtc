@@ -230,7 +230,7 @@ def build(target_dir, platform, debug, clean):
         simulators = [item for item in IOS_BUILD_ARCHS if item.startswith('simulator')]
         tenv, arch = simulators[0].split(':')
         gn_out_dir = 'out/%s-ios-%s-%s' % (build_type, tenv, arch)
-        ios_out_dir = os.path.join(build_dir, "ios")
+        ios_out_dir = os.path.join(build_dir, "iossim")
         shutil.copytree(os.path.join(gn_out_dir, APPLE_FRAMEWORK_NAME), os.path.join(ios_out_dir, APPLE_FRAMEWORK_NAME))
         out_lib_path = os.path.join(ios_out_dir, APPLE_FRAMEWORK_NAME, 'WebRTC')
         slice_paths = []
@@ -251,7 +251,7 @@ def build(target_dir, platform, debug, clean):
         sh('lipo %s -create -output %s' % (' '.join(slice_paths), out_dsym_path))
 
         _IOS_BUILD_ARCHS = [item for item in IOS_BUILD_ARCHS if not item.startswith('simulator')]
-        _IOS_BUILD_ARCHS.append(simulators[0])
+        # _IOS_BUILD_ARCHS.append(simulators[0])
 
         # Fat macOS Framework (macos-arm64_x86_64)
         gn_out_dir = 'out/%s-macos-%s' % (build_type, MACOS_BUILD_ARCHS[0])
@@ -283,8 +283,11 @@ def build(target_dir, platform, debug, clean):
             gn_out_dir = 'out/%s-ios-%s-%s' % (build_type, tenv, arch)
             xcodebuild_cmd += ' -framework %s' % os.path.abspath(os.path.join(gn_out_dir, APPLE_FRAMEWORK_NAME))
             xcodebuild_cmd += ' -debug-symbols %s' % os.path.abspath(os.path.join(gn_out_dir, APPLE_DSYM_NAME))
+        # ios simulators(single fat)
+        xcodebuild_cmd += ' -framework %s' % os.path.abspath(os.path.join(ios_out_dir, APPLE_FRAMEWORK_NAME))
+        xcodebuild_cmd += ' -debug-symbols %s' % os.path.abspath(os.path.join(ios_out_dir, APPLE_DSYM_NAME))
         ## macOS (single fat slice)
-        gn_out_dir = 'out/%s-macos-%s' % (build_type, MACOS_BUILD_ARCHS[0])
+        # gn_out_dir = 'out/%s-macos-%s' % (build_type, MACOS_BUILD_ARCHS[0])
         xcodebuild_cmd += ' -framework %s' % os.path.abspath(os.path.join(mac_out_dir, APPLE_FRAMEWORK_NAME))
         xcodebuild_cmd += ' -debug-symbols %s' % os.path.abspath(os.path.join(mac_out_dir, APPLE_DSYM_NAME))
         sh(xcodebuild_cmd)

@@ -23,7 +23,7 @@ After having built the `WebRTC.xcframework.zip` artifact with the Python script 
 - Create a GH release with the following versioning: X.0.Y where X is the Chrome milestone number and Y is our build number starting at 0
     - The release should tag the milestone branch
 - Upload the build artifact to the release
-- Push the spec to CocoaPods: `pod trunk push ios/JitsiWebRTC.podspec`
+- Push the spec to CocoaPods: `pod trunk push ios/mWebRTC.podspec`
 
 ### Building for Android
 

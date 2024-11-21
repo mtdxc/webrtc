@@ -42,6 +42,7 @@ GN_COMMON_ARGS = [
     'rtc_libvpx_build_vp9=true',
     'rtc_enable_protobuf=false',
     'rtc_include_tests=false',
+    'rtc_use_h264=true',
     'is_debug=%s',
     'target_cpu="%s"'
 ]

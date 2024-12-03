@@ -43,6 +43,8 @@ GN_COMMON_ARGS = [
     'rtc_enable_protobuf=false',
     'rtc_include_tests=false',
     'rtc_use_h264=true',
+    'ffmpeg_branding="Chrome"',
+    'proprietary_codecs=true',
     'is_debug=%s',
     'target_cpu="%s"'
 ]

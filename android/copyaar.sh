@@ -1,0 +1,1 @@
+cp build/outputs/aar/webrtc-release.aar ../../RnWebRTC/react-native-webrtc/android/libs/

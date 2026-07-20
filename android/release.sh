@@ -2,4 +2,4 @@ scp qkids-ubuntu@192.168.25.227:~/webrtc/tools/build_webrtc/build/android/androi
 rm -rf libs
 unzip android-webrtc.zip -d libs
 ./gradlew assembleRelease
-cp build/outputs/aar/webrtc-release.aar ../../RnWebRTC/node_modules/react-native-webrtc/android/libs/
+cp build/outputs/aar/webrtc-release.aar ~/wsp/RnWebRTC/node_modules/react-native-webrtc/android/libs/
